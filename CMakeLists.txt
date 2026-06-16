@@ -35,6 +35,14 @@ endif()
 
 project(EmptyEpsilon LANGUAGES CXX C  VERSION ${MAJOR}.${MINOR}.${PATCH})
 
+if( ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
+  set(USE_FLAGS "-s USE_SDL=2")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${USE_FLAGS}")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${USE_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${USE_FLAGS}")
+  set(CMAKE_EXECUTABLE_SUFFIX .html)
+endif()
+
 include(GNUInstallDirs)
 
 # Defaults
