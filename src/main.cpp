@@ -238,39 +238,40 @@ int main(int argc, char** argv)
         new ShipSelectionScreen();
     }
 
+    LOG(Info, "engine->runMainLoop()");
     engine->runMainLoop();
-
-    // Set FSAA and fullscreen defaults from windowManager.
-    if (windows.size() > 0)
-    {
-        PreferencesManager::set("fsaa", windows[0]->getFSAA());
-        PreferencesManager::set("fullscreen", (int)windows[0]->getMode());
-    }
-
-    // Set the default music_, sound_, and engine_volume to the current volume.
-    PreferencesManager::set("music_volume", soundManager->getMusicVolume());
-    PreferencesManager::set("sound_volume", soundManager->getMasterSoundVolume());
-    PreferencesManager::set("engine_volume", PreferencesManager::get("engine_volume", "50"));
-
-    // Enable music and engine sounds on the main screen only by default.
-    if (PreferencesManager::get("music_enabled").empty())
-        PreferencesManager::set("music_enabled", "2");
-
-    if (PreferencesManager::get("engine_enabled").empty())
-        PreferencesManager::set("engine_enabled", "2");
-
-    if (PreferencesManager::get("headless") == "")
-    {
-#ifdef _WIN32
-        mkdir(configuration_path.c_str());
-#else
-        mkdir(configuration_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-#endif
-        PreferencesManager::save(configuration_path + "/options.ini");
-        sp::io::Keybinding::saveKeybindings(configuration_path + "/keybindings.json");
-    }
-    windows.clear();
-    delete engine;
+//
+//     // Set FSAA and fullscreen defaults from windowManager.
+//     if (windows.size() > 0)
+//     {
+//         PreferencesManager::set("fsaa", windows[0]->getFSAA());
+//         PreferencesManager::set("fullscreen", (int)windows[0]->getMode());
+//     }
+//
+//     // Set the default music_, sound_, and engine_volume to the current volume.
+//     PreferencesManager::set("music_volume", soundManager->getMusicVolume());
+//     PreferencesManager::set("sound_volume", soundManager->getMasterSoundVolume());
+//     PreferencesManager::set("engine_volume", PreferencesManager::get("engine_volume", "50"));
+//
+//     // Enable music and engine sounds on the main screen only by default.
+//     if (PreferencesManager::get("music_enabled").empty())
+//         PreferencesManager::set("music_enabled", "2");
+//
+//     if (PreferencesManager::get("engine_enabled").empty())
+//         PreferencesManager::set("engine_enabled", "2");
+//
+//     if (PreferencesManager::get("headless") == "")
+//     {
+// #ifdef _WIN32
+//         mkdir(configuration_path.c_str());
+// #else
+//         mkdir(configuration_path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+// #endif
+//         PreferencesManager::save(configuration_path + "/options.ini");
+//         sp::io::Keybinding::saveKeybindings(configuration_path + "/keybindings.json");
+//     }
+//     windows.clear();
+//     delete engine;
 
     return 0;
 }

@@ -881,3 +881,11 @@ if(UNIX AND NOT APPLE AND NOT STEAMSDK)
   install(FILES logo512.png DESTINATION "share/icons/hicolor/512x512/apps" RENAME "io.github.daid.EmptyEpsilon.png")
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/io.github.daid.EmptyEpsilon.metainfo.xml DESTINATION "share/metainfo")
 endif()
+
+if( ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
+  target_link_options(${PROJECT_NAME} PRIVATE
+          "-sUSE_SDL=2"
+          "-sALLOW_MEMORY_GROWTH=1"
+          "--preload-file" "${CMAKE_SOURCE_DIR}/resources@/resources"
+  )
+endif()
