@@ -30,7 +30,7 @@ bool createDisplayWindows()
     int width = 1200;
     int height = 900;
     int fsaa = 0;
-    Window::Mode fullscreen = (Window::Mode)PreferencesManager::get("fullscreen", "1").toInt();
+    Window::Mode fullscreen = (Window::Mode)PreferencesManager::get("fullscreen", "0").toInt();
     LOG(INFO, "Debug 1");
 
     if (PreferencesManager::get("fsaa").toInt() > 0)

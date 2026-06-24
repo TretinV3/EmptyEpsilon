@@ -7,6 +7,7 @@
 #include "gameGlobalInfo.h"
 #include "i18n.h"
 #include "config.h"
+#include "mainMenus.h"
 #include "gui/gui2_label.h"
 #include "gui/gui2_panel.h"
 
@@ -73,8 +74,12 @@ void JoinServerScreen::update(float delta)
         auto reason = game_client->getDisconnectReason();
         destroy();
         disconnectFromServer();
-        
+
+#ifndef __EMSCRIPTEN__
         new ServerBrowserMenu(reason);
+#else
+         new MainMenu();
+#endif
         } break;
     case GameClient::Connected:
         if (!target.address.getHumanReadable().empty())

@@ -13,6 +13,7 @@
 #include "screens/gm/gameMasterScreen.h"
 #include "screenComponents/rotatingModelView.h"
 #include "config.h"
+#include "joinServerMenu.h"
 
 #include "gui/gui2_image.h"
 #include "gui/gui2_label.h"
@@ -121,5 +122,24 @@ MainMenu::MainMenu()
             new GameMasterScreen(nullptr);
         }
     }))->setPosition({370, -150}, sp::Alignment::BottomLeft)->setSize(300, 50);
+#endif
+
+#ifdef __EMSCRIPTEN__
+    (new GuiButton(this, "DIRECT_CONNECT", "DIRECT CONNECT", [this]() {
+       string host = "localhost";
+       uint64_t port = defaultServerPort;
+       if (host.find(":") != -1)
+       {
+           port = host.substr(host.find(":") + 1).toInt64();
+           host = host.substr(0, host.find(":"));
+       }
+       ServerScanner::ServerInfo info;
+       info.type = ServerScanner::ServerType::Manual;
+       info.name = host;
+       info.port = port;
+       info.address = sp::io::network::Address(host);
+       new JoinServerScreen(info);
+       destroy();
+    }))->setPosition({50, -10}, sp::Alignment::BottomLeft)->setSize(300, 50);
 #endif
 }

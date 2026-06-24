@@ -4,6 +4,8 @@
 #include <string.h>
 #include <i18n.h>
 #include <multiplayer_proxy.h>
+
+#include "multiplayer_client.h"
 #ifdef _MSC_VER
 #include <direct.h>
 #else
@@ -41,6 +43,11 @@
 #include "steam/steam_api.h"
 #include "steamrichpresence.h"
 #endif
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 
 #include "shaderRegistry.h"
 #include "glObjects.h"
@@ -86,6 +93,15 @@ int runProxyServer()
     return 0;
 }
 
+#ifdef __EMSCRIPTEN__
+
+extern "C" {
+extern bool js_start_http();
+extern bool js_close_http();
+}
+
+#endif
+
 int main(int argc, char** argv)
 {
 #ifdef DEBUG
@@ -126,7 +142,12 @@ int main(int argc, char** argv)
             port_nr = 80;
         LOG(INFO) << "Enabling HTTP script access on port: " << port_nr;
         LOG(INFO) << "NOTE: This is potentially a risk!";
+
+#ifndef __EMSCRIPTEN__
         new EEHttpServer(port_nr, PreferencesManager::get("www_directory", "www"));
+#else
+        js_start_http();
+#endif
     }
 
     string theme_name = PreferencesManager::get("guitheme", "default");
@@ -367,3 +388,167 @@ std::unordered_map<string, string> loadScenarioSettingsFromPrefs()
 
     return settings;
 }
+
+
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_KEEPALIVE
+int start_em_server(string map)
+{
+#ifdef DEBUG
+    Logging::setLogLevel(LOGLEVEL_DEBUG);
+#else
+    Logging::setLogLevel(LOGLEVEL_INFO);
+#endif
+
+    PreferencesManager::set("headless", map);
+
+    LOG(Info, "Starting...");
+    new Engine();
+    initSystemsAndComponents();
+
+    if (PreferencesManager::get("proxy") != "")
+        return runProxyServer();
+
+    if (PreferencesManager::get("headless") != "") {
+        textureManager.setDisabled(true);
+        Logging::setLogStdout();
+    }
+
+    initResourcePaths();
+    textureManager.setDefaultSmooth(true);
+    textureManager.setDefaultRepeated(true);
+    i18n::load("locale/main." + PreferencesManager::get("language", "en") + ".po");
+    keys.init();
+    colorConfig.load();
+
+    if (PreferencesManager::get("httpserver").toInt() != 0)
+    {
+        int port_nr = PreferencesManager::get("httpserver").toInt();
+        if (port_nr < 10)
+            port_nr = 80;
+        LOG(INFO) << "Enabling HTTP script access on port: " << port_nr;
+        LOG(INFO) << "NOTE: This is potentially a risk!";
+        new EEHttpServer(port_nr, PreferencesManager::get("www_directory", "www"));
+    }
+
+    string theme_name = PreferencesManager::get("guitheme", "default");
+    if (!GuiTheme::loadTheme(theme_name, "gui/"+theme_name+".theme.txt"))
+    {
+        LOG(ERROR, "Failed to load "+ theme_name + " theme, trying default. Resources missing or contains errors ? Check gui/" + theme_name + ".theme.txt");
+        if (!GuiTheme::loadTheme("default", "gui/default.theme.txt"))
+        {
+            LOG(ERROR, "Failed to load default theme, exiting. Check gui/default.theme.txt"); //Yes, we may try to load twice default theme but this should be a rare error case which always finish in exit
+            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Failed to load gui theme, resources missing or contains errors ? Check gui/default.theme.txt", nullptr);
+            return 1;
+        }
+        GuiTheme::setCurrentTheme("default");
+    }
+    else
+    {
+        GuiTheme::setCurrentTheme(theme_name);
+    }
+
+    if (PreferencesManager::get("headless") == "")
+    {
+        if (!createDisplayWindows())
+            return 1;
+    } else {
+        new StdinLuaConsole();
+    }
+
+    soundManager->setMusicVolume(PreferencesManager::get("music_volume", "50").toFloat());
+    soundManager->setMasterSoundVolume(PreferencesManager::get("sound_volume", "50").toFloat());
+
+    main_font = GuiTheme::getCurrentTheme()->getStyle("base")->states[0].font;
+    bold_font = GuiTheme::getCurrentTheme()->getStyle("bold")->states[0].font;
+    if (!main_font || !bold_font)
+    {
+        LOG(ERROR, "Missing font or bold font.");
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Failed to load main or bold font, resources missing?", nullptr);
+        return 1;
+    }
+
+    sp::RenderTarget::setDefaultFont(main_font);
+
+    string tutorial = PreferencesManager::get("tutorial");   // use "00_all.lua" for all tutorials
+    string server_scenario = PreferencesManager::get("server_scenario");
+
+    if (!tutorial.empty())
+    {
+        LOG(DEBUG) << "Starting tutorial: " << tutorial;
+        new TutorialGame(false, tutorial);
+    }
+    else if (server_scenario.empty())
+        returnToMainMenu(defaultRenderLayer);
+    else
+    {
+        // server_scenario creates a server running the specified scenario
+        // using its defined default settings, and launches directly into
+        // the ship selection screen instead of the main menu.
+
+        // Create the server to listen on the assigned port.
+        // Use the default port if server_port isn't set or has an invalid
+        // value (toInt returns 0 if empty or not an int).
+        int server_port = PreferencesManager::get("server_port").toInt();
+
+        if (server_port < 10 || server_port > 65535)
+        {
+            LOG(Warning, "Invalid server_port " + string(server_port));
+            server_port = defaultServerPort;
+        }
+
+        LOG(Info, "Launching server_scenario " + server_scenario + " on port " + string(server_port));
+        new EpsilonServer(server_port);
+
+        if(!gameGlobalInfo) // => failed to start server
+            return 1;
+
+        if (PreferencesManager::get("server_name") != "") game_server->setServerName(PreferencesManager::get("server_name"));
+        if (PreferencesManager::get("server_password") != "") game_server->setPassword(PreferencesManager::get("server_password").upper());
+        if (PreferencesManager::get("server_internet") == "1") game_server->registerOnMasterServer(PreferencesManager::get("registry_registration_url", "http://daid.eu/ee/register.php"));
+
+        // Load the scenario and open the ship selection screen.
+        gameGlobalInfo->startScenario(server_scenario, loadScenarioSettingsFromPrefs());
+        new ShipSelectionScreen();
+    }
+
+    LOG(Info, "engine->runMainLoop()");
+    engine->runMainLoop();
+
+    return 0;
+}
+
+extern "C" {
+
+EMSCRIPTEN_KEEPALIVE
+void accept_client(int id) {
+    std::unique_ptr<sp::io::network::TcpSocket> socket = std::unique_ptr<sp::io::network::TcpSocket>(new sp::io::network::TcpSocket());
+    socket->setId(id);
+    game_server->newClientConnection(std::move(socket));
+}
+
+EMSCRIPTEN_KEEPALIVE
+const char* execute_lua(string data) {
+    if (!gameGlobalInfo)
+        return "{\"ERROR\": \"No game\"}";
+
+    sp::script::Environment env(gameGlobalInfo->script_environment_base.get());
+    setupSubEnvironment(env);
+    auto result = env.run<string>(data);
+    string output;
+    if (result.isErr()) {
+        output = "{\"ERROR\": \"Script error: " + result.error().replace("\"", "'") + "\"}";
+    } else {
+        output = result.value();
+    }
+    return output.c_str();
+}
+
+EMSCRIPTEN_KEEPALIVE
+void receive_server_data(int8_t* data, int size) {
+}
+
+
+}
+
+#endif

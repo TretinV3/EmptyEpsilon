@@ -883,9 +883,37 @@ if(UNIX AND NOT APPLE AND NOT STEAMSDK)
 endif()
 
 if( ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
+  add_compile_options(
+          -lwebsocket.js
+          -sPROXY_POSIX_SOCKETS
+          -pthread
+          -sPROXY_TO_PTHREAD
+          -fsantize=address
+          -g
+          -sSTACK_OVERFLOW_CHECK=2
+  )
+  add_link_options(
+          -lwebsocket.js
+          -sPROXY_POSIX_SOCKETS
+          -pthread
+          -g
+          -sPROXY_TO_PTHREAD
+          -fsantize=address
+          -sSTACK_OVERFLOW_CHECK=2
+  )
   target_link_options(${PROJECT_NAME} PRIVATE
-          "-sUSE_SDL=2"
-          "-sALLOW_MEMORY_GROWTH=1"
-          "--preload-file" "${CMAKE_SOURCE_DIR}/resources@/resources"
+          -sUSE_SDL=2
+          -sALLOW_MEMORY_GROWTH=1
+          -sSTACK_SIZE=131072
+          -g
+          -sMODULARIZE
+          -sEXPORTED_RUNTIME_METHODS=ccall
+          -fsantize=address
+          -sSTACK_OVERFLOW_CHECK=2
+          --js-library
+          ${CMAKE_SOURCE_DIR}/nodejs/lib.js
+       #   -sINVOKE_RUN=0
+          --preload-file
+          "${CMAKE_SOURCE_DIR}/emassets@/"
   )
 endif()
