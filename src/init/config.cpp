@@ -41,6 +41,8 @@ string initConfiguration(int argc, char** argv)
     {
 #ifdef STEAMSDK
         PreferencesManager::setTemporary("username", SteamFriends()->GetPersonaName());
+#elifdef __EMSCRIPTEN__
+
 #else
         if (getenv("USERNAME"))
             PreferencesManager::setTemporary("username", getenv("USERNAME"));

@@ -25,13 +25,10 @@ bool createDisplayWindows()
 
     new LuaConsole();
 
-    LOG(INFO, "Done creating lua console");
-
     int width = 1200;
     int height = 900;
     int fsaa = 0;
     Window::Mode fullscreen = (Window::Mode)PreferencesManager::get("fullscreen", "0").toInt();
-    LOG(INFO, "Debug 1");
 
     if (PreferencesManager::get("fsaa").toInt() > 0)
     {
@@ -39,7 +36,6 @@ bool createDisplayWindows()
         if (fsaa < 2)
             fsaa = 2;
     }
-    LOG(INFO, "Debug 2");
 
 #ifndef ANDROID
     if (PreferencesManager::get("touchscreen").toInt() == 0)
@@ -47,12 +43,9 @@ bool createDisplayWindows()
         engine->registerObject("mouseRenderer", new MouseRenderer(mouseLayer));
     }
 #endif
-    LOG(INFO, "Debug 3");
 
     windows.push_back(new Window({width, height}, fullscreen, warpPostProcessor, fsaa));
-    LOG(INFO, "Debug 3.5");
     window_render_layers.push_back(defaultRenderLayer);
-    LOG(INFO, "Debug 4");
 
     // if (PreferencesManager::get("multimonitor", "0").toInt() != 0)
     // {
@@ -85,7 +78,6 @@ bool createDisplayWindows()
         else
             LOG(WARNING, "GL Debug output requested but not available on this system.");
     }
-    LOG(INFO, "Debug 5");
 
 
     for(size_t n=0; n<windows.size(); n++)
@@ -99,7 +91,6 @@ bool createDisplayWindows()
         else
             window->setTitle("EmptyEpsilon" + postfix);
     }
-    LOG(INFO, "Debug 6");
 
     if (gl::isAvailable())
     {
@@ -110,10 +101,8 @@ bool createDisplayWindows()
             return false;
         }
     }
-    LOG(INFO, "Debug 7");
 
     new DebugRenderer(mouseLayer);
 
-    LOG(INFO, "Done creating display windows");
     return true;
 }

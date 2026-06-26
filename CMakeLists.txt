@@ -883,37 +883,43 @@ if(UNIX AND NOT APPLE AND NOT STEAMSDK)
 endif()
 
 if( ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
-  add_compile_options(
-          -lwebsocket.js
-          -sPROXY_POSIX_SOCKETS
-          -pthread
-          -sPROXY_TO_PTHREAD
-          -fsantize=address
-          -g
-          -sSTACK_OVERFLOW_CHECK=2
+
+  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/web")
+  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/assets")
+  file(COPY_FILE "${CMAKE_SOURCE_DIR}/js/server.js" "${CMAKE_BINARY_DIR}/web/server.js")
+  file(COPY_FILE "${CMAKE_SOURCE_DIR}/js/package.json" "${CMAKE_BINARY_DIR}/web/package.json")
+  file(COPY_FILE "${CMAKE_SOURCE_DIR}/js/package-lock.json" "${CMAKE_BINARY_DIR}/web/package-lock.json")
+
+
+  add_custom_command(
+          TARGET ${PROJECT_NAME} PRE_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/resources/ ${CMAKE_BINARY_DIR}/assets/resources
+          COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/scripts/ ${CMAKE_BINARY_DIR}/assets/scripts
   )
-  add_link_options(
-          -lwebsocket.js
-          -sPROXY_POSIX_SOCKETS
-          -pthread
-          -g
-          -sPROXY_TO_PTHREAD
-          -fsantize=address
-          -sSTACK_OVERFLOW_CHECK=2
+
+
+  add_custom_command(
+          TARGET ${PROJECT_NAME} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.html" "${CMAKE_BINARY_DIR}/web/index.html"
+          COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.js" "${CMAKE_BINARY_DIR}/web/${PROJECT_NAME}.js"
+          COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.wasm" "${CMAKE_BINARY_DIR}/web/${PROJECT_NAME}.wasm"
+          COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.data" "${CMAKE_BINARY_DIR}/web/${PROJECT_NAME}.data"
   )
-  target_link_options(${PROJECT_NAME} PRIVATE
+
+target_link_options(${PROJECT_NAME} PRIVATE
           -sUSE_SDL=2
           -sALLOW_MEMORY_GROWTH=1
-          -sSTACK_SIZE=131072
-          -g
           -sMODULARIZE
           -sEXPORTED_RUNTIME_METHODS=ccall
-          -fsantize=address
-          -sSTACK_OVERFLOW_CHECK=2
+          -sMAX_WEBGL_VERSION=2
+          -sMIN_WEBGL_VERSION=2
+          -sFORCE_FILESYSTEM
+          --extern-post-js "${CMAKE_SOURCE_DIR}/js/screen.js"
+          --shell-file
+          "${CMAKE_SOURCE_DIR}/shell.html"
           --js-library
-          ${CMAKE_SOURCE_DIR}/nodejs/lib.js
-       #   -sINVOKE_RUN=0
+          "${CMAKE_SOURCE_DIR}/js/lib.js"
           --preload-file
-          "${CMAKE_SOURCE_DIR}/emassets@/"
+          "${CMAKE_BINARY_DIR}/assets@/"
   )
 endif()

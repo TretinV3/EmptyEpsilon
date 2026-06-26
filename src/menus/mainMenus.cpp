@@ -39,14 +39,32 @@ MainMenu::MainMenu()
         PreferencesManager::set("username", text);
     })->setPosition({50, -350}, sp::Alignment::BottomLeft)->setSize(300, 50);
 
+#ifndef __EMSCRIPTEN__
     (new GuiButton(this, "START_SERVER", tr("mainMenu", "Start server"), [this]() {
         new ServerSetupScreen();
         destroy();
     }))->setPosition({50, -230}, sp::Alignment::BottomLeft)->setSize(300, 50);
+#endif
 
     (new GuiButton(this, "START_CLIENT", tr("mainMenu", "Start client"), [this]() {
+#ifndef __EMSCRIPTEN__
         new ServerBrowserMenu();
-        destroy();
+#else
+        string host = "this";
+        uint64_t port = defaultServerPort;
+        if (host.find(":") != -1)
+        {
+            port = host.substr(host.find(":") + 1).toInt64();
+            host = host.substr(0, host.find(":"));
+        }
+        ServerScanner::ServerInfo info;
+        info.type = ServerScanner::ServerType::Manual;
+        info.name = host;
+        info.port = port;
+        info.address = sp::io::network::Address(host);
+        new JoinServerScreen(info);
+#endif
+            destroy();
     }))->setPosition({50, -170}, sp::Alignment::BottomLeft)->setSize(300, 50);
 
     (new GuiButton(this, "OPEN_OPTIONS", tr("mainMenu", "Options"), [this]() {
@@ -61,7 +79,12 @@ MainMenu::MainMenu()
     (new GuiButton(this, "START_TUTORIAL", tr("mainMenu", "Tutorials"), [this]() {
         new TutorialMenu();
         destroy();
-    }))->setPosition({370, -50}, sp::Alignment::BottomLeft)->setSize(300, 50);
+    }))->setPosition({370, -50}, sp::Alignment::BottomLeft)->setSize(300, 50)
+    #ifdef __EMSCRIPTEN__
+        // Not yet implemented
+        ->setEnable(false)
+    #endif
+    ;
 
     float y = 100;
     (new GuiLabel(this, "CREDITS", tr("Credits", "Credits"), 25))->setAlignment(sp::Alignment::CenterRight)->setPosition(-50, y, sp::Alignment::TopRight)->setSize(0, 25); y += 25;
@@ -124,22 +147,4 @@ MainMenu::MainMenu()
     }))->setPosition({370, -150}, sp::Alignment::BottomLeft)->setSize(300, 50);
 #endif
 
-#ifdef __EMSCRIPTEN__
-    (new GuiButton(this, "DIRECT_CONNECT", "DIRECT CONNECT", [this]() {
-       string host = "localhost";
-       uint64_t port = defaultServerPort;
-       if (host.find(":") != -1)
-       {
-           port = host.substr(host.find(":") + 1).toInt64();
-           host = host.substr(0, host.find(":"));
-       }
-       ServerScanner::ServerInfo info;
-       info.type = ServerScanner::ServerType::Manual;
-       info.name = host;
-       info.port = port;
-       info.address = sp::io::network::Address(host);
-       new JoinServerScreen(info);
-       destroy();
-    }))->setPosition({50, -10}, sp::Alignment::BottomLeft)->setSize(300, 50);
-#endif
 }
