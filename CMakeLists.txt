@@ -885,16 +885,21 @@ endif()
 if( ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
 
   file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/web")
-  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/assets")
+  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/web/assets")
   file(COPY_FILE "${CMAKE_SOURCE_DIR}/js/server.js" "${CMAKE_BINARY_DIR}/web/server.js")
   file(COPY_FILE "${CMAKE_SOURCE_DIR}/js/package.json" "${CMAKE_BINARY_DIR}/web/package.json")
   file(COPY_FILE "${CMAKE_SOURCE_DIR}/js/package-lock.json" "${CMAKE_BINARY_DIR}/web/package-lock.json")
 
+  file(COPY_FILE "${CMAKE_SOURCE_DIR}/www/favicon.ico" "${CMAKE_BINARY_DIR}/web/favicon.ico")
+  add_custom_command(
+          TARGET ${PROJECT_NAME}
+          COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/www/fonts ${CMAKE_BINARY_DIR}/web/fonts
+  )
 
   add_custom_command(
           TARGET ${PROJECT_NAME} PRE_BUILD
-          COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/resources/ ${CMAKE_BINARY_DIR}/assets/resources
-          COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/scripts/ ${CMAKE_BINARY_DIR}/assets/scripts
+          COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/resources/ ${CMAKE_BINARY_DIR}/web/assets/resources
+          COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/scripts/ ${CMAKE_BINARY_DIR}/web/assets/scripts
   )
 
 
@@ -920,6 +925,6 @@ target_link_options(${PROJECT_NAME} PRIVATE
           --js-library
           "${CMAKE_SOURCE_DIR}/js/lib.js"
           --preload-file
-          "${CMAKE_BINARY_DIR}/assets@/"
+          "${CMAKE_BINARY_DIR}/web/assets@/"
   )
 endif()
