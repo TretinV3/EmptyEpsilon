@@ -911,6 +911,16 @@ if( ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
           COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.data" "${CMAKE_BINARY_DIR}/web/${PROJECT_NAME}.data"
   )
 
+  # FIXME hacky
+  # Enable webgl capabilities
+  add_custom_command(
+          TARGET ${PROJECT_NAME} POST_BUILD
+          COMMAND sed -i "s/alpha:false/alpha:true/" "${CMAKE_BINARY_DIR}/web/${PROJECT_NAME}.js"
+          COMMAND sed -i "s/depth:false/depth:true/" "${CMAKE_BINARY_DIR}/web/${PROJECT_NAME}.js"
+          COMMAND sed -i "s/stencil:false/stencil:true/" "${CMAKE_BINARY_DIR}/web/${PROJECT_NAME}.js"
+          COMMAND sed -i "s/antialias:false/antialias:true/" "${CMAKE_BINARY_DIR}/web/${PROJECT_NAME}.js"
+  )
+
 target_link_options(${PROJECT_NAME} PRIVATE
           -sUSE_SDL=2
           -sALLOW_MEMORY_GROWTH=1
