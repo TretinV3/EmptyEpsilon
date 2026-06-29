@@ -100,7 +100,7 @@ addToLibrary({
          * Create the http server and link it to the websocket server and REST api
          */
         WSSLib.prototype.init_http = function () {
-            if (this.http == null) {
+            if (this.http == null && typeof window === 'undefined') {
                 this.start_http();
 
                 const http = require('http');

@@ -80,10 +80,6 @@ MainMenu::MainMenu()
         new TutorialMenu();
         destroy();
     }))->setPosition({370, -50}, sp::Alignment::BottomLeft)->setSize(300, 50)
-    #ifdef __EMSCRIPTEN__
-        // Not yet implemented
-        ->setEnable(false)
-    #endif
     ;
 
     float y = 100;
