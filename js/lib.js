@@ -321,4 +321,20 @@ addToLibrary({
     js_websocket_send__deps: ['$js_wss'],
     js_websocket_receive: function () { },
     js_websocket_receive__deps: ['$js_wss'],
+
+    js_get_screen_size: function (ptrRect) {
+        var win = window,
+            doc = document,
+            docElem = doc.documentElement,
+            body = doc.getElementsByTagName('body')[0],
+            x = win.innerWidth || docElem.clientWidth || body.clientWidth,
+            y = win.innerHeight|| docElem.clientHeight|| body.clientHeight;
+
+        //     int x, y;
+        //     int w, h;
+        //setValue(ptrRect + 0, 0, "i64");
+        //setValue(ptrRect + 4, 0, "i64");
+        setValue(ptrRect + 8, x, "i32");
+        setValue(ptrRect + 12, y, "i32");
+    }
 });

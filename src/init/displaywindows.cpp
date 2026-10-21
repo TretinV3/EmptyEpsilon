@@ -47,21 +47,21 @@ bool createDisplayWindows()
     windows.push_back(new Window({width, height}, fullscreen, warpPostProcessor, fsaa));
     window_render_layers.push_back(defaultRenderLayer);
 
-    // if (PreferencesManager::get("multimonitor", "0").toInt() != 0)
-    // {
-    //     auto n = PreferencesManager::get("multimonitor", "0").toInt();
-    //     if (n < 2)
-    //         n = SDL_GetNumVideoDisplays();
-    //     while(int(windows.size()) < n)
-    //     {
-    //         auto wrl = new RenderLayer();
-    //         auto ml = new RenderLayer(wrl);
-    //         new MouseRenderer(ml);
-    //         windows.push_back(new Window({width, height}, fullscreen, ml, fsaa));
-    //         window_render_layers.push_back(wrl);
-    //         new SecondMonitorScreen(windows.size() - 1);
-    //     }
-    // }
+    if (PreferencesManager::get("multimonitor", "0").toInt() != 0)
+    {
+        auto n = PreferencesManager::get("multimonitor", "0").toInt();
+        if (n < 2)
+            n = SDL_GetNumVideoDisplays();
+        while(int(windows.size()) < n)
+        {
+            auto wrl = new RenderLayer();
+            auto ml = new RenderLayer(wrl);
+            new MouseRenderer(ml);
+            windows.push_back(new Window({width, height}, fullscreen, ml, fsaa));
+            window_render_layers.push_back(wrl);
+            new SecondMonitorScreen(windows.size() - 1);
+        }
+    }
 
 #if defined(DEBUG)
     // Synchronous gl debug output always in debug.

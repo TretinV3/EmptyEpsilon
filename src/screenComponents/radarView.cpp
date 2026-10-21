@@ -344,6 +344,8 @@ void GuiRadarView::drawSectorGrid(sp::RenderTarget& renderer)
         renderer.drawLine(worldToScreen(glm::vec2((sector_x_min-1)*sector_size, y)), worldToScreen(glm::vec2((sector_x_max+1)*sector_size, y)), color);
     }
 
+    // FIXME: Emscripten Safari Error, points are filling up the full screen
+    #ifndef __EMSCRIPTEN__
     color = glm::u8vec4(64, 64, 128, 255);
     int sub_sector_x_min = floor((view_position.x - (radar_screen_center.x - rect.position.x) / scale) / sub_sector_size) + 1;
     int sub_sector_x_max = floor((view_position.x + (rect.position.x + rect.size.x - radar_screen_center.x) / scale) / sub_sector_size);
@@ -359,6 +361,8 @@ void GuiRadarView::drawSectorGrid(sp::RenderTarget& renderer)
             renderer.drawPoint(worldToScreen(glm::vec2(x,y)), color);
         }
     }
+    #endif
+
     //We finish the rendering here, to make sure the sector grid lines are drawn below anything else.
     renderer.finish();
 }
