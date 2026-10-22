@@ -322,7 +322,7 @@ addToLibrary({
     js_websocket_receive: function () { },
     js_websocket_receive__deps: ['$js_wss'],
 
-    js_get_screen_size: function (ptrRect) {
+    js_get_screen_size: function (ptrW, ptrH) {
         var win = window,
             doc = document,
             docElem = doc.documentElement,
@@ -334,7 +334,7 @@ addToLibrary({
         //     int w, h;
         //setValue(ptrRect + 0, 0, "i64");
         //setValue(ptrRect + 4, 0, "i64");
-        setValue(ptrRect + 8, x, "i32");
-        setValue(ptrRect + 12, y, "i32");
+        setValue(ptrW, x, "i32");
+        setValue(ptrH, y, "i32");
     }
 });
