@@ -119,20 +119,20 @@ public:
 
 
 #define ADD_PAGE(LABEL, COMPONENT) \
-    new_page = new GuiTweakPage(this); \
+    new_page = new GuiTweakPage(content); \
     new_page->has_component = [](sp::ecs::Entity e) { return e.hasComponent<COMPONENT>(); }; \
     new_page->add_component = [](sp::ecs::Entity e) { e.addComponent<COMPONENT>(); }; \
     new_page->remove_component = [](sp::ecs::Entity e) { e.removeComponent<COMPONENT>(); }; \
     pages.push_back(new_page); \
     list->addEntry(LABEL, "");
 #define ADD_LABEL(LABEL) do { \
-        auto row = new GuiElement(new_page->contents, ""); \
+        auto row = new GuiElement(new_page->tweaks, ""); \
         row->setSize(GuiElement::GuiSizeMax, 30)->setAttribute("layout", "horizontal"); \
         auto label = new GuiLabel(row, "", LABEL, 20); \
         label->setAlignment(sp::Alignment::CenterRight)->setSize(GuiElement::GuiSizeMax, 30); \
     } while(0)
 #define ADD_TEXT_TWEAK(LABEL, COMPONENT, VALUE) do { \
-        auto row = new GuiElement(new_page->contents, ""); \
+        auto row = new GuiElement(new_page->tweaks, ""); \
         row->setSize(GuiElement::GuiSizeMax, 30)->setAttribute("layout", "horizontal"); \
         auto label = new GuiLabel(row, "", LABEL, 20); \
         label->setAlignment(sp::Alignment::CenterRight)->setSize(GuiElement::GuiSizeMax, 30); \
@@ -141,7 +141,7 @@ public:
         ui->callback([this](string text) { auto v = entity.getComponent<COMPONENT>(); if (v) v->VALUE = text; }); \
     } while(0)
 #define ADD_NUM_TEXT_TWEAK(LABEL, COMPONENT, VALUE) do { \
-        auto row = new GuiElement(new_page->contents, ""); \
+        auto row = new GuiElement(new_page->tweaks, ""); \
         row->setSize(GuiElement::GuiSizeMax, 30)->setAttribute("layout", "horizontal"); \
         auto label = new GuiLabel(row, "", LABEL, 20); \
         label->setAlignment(sp::Alignment::CenterRight)->setSize(GuiElement::GuiSizeMax, 30); \
@@ -150,7 +150,7 @@ public:
         ui->callback([this](string text) { auto v = entity.getComponent<COMPONENT>(); if (v) v->VALUE = text.toFloat(); }); \
     } while(0)
 #define ADD_NUM_SLIDER_TWEAK(LABEL, COMPONENT, MIN_VALUE, MAX_VALUE, VALUE) do { \
-        auto row = new GuiElement(new_page->contents, ""); \
+        auto row = new GuiElement(new_page->tweaks, ""); \
         row->setSize(GuiElement::GuiSizeMax, 30)->setAttribute("layout", "horizontal"); \
         auto label = new GuiLabel(row, "", LABEL, 20); \
         label->setAlignment(sp::Alignment::CenterRight)->setSize(GuiElement::GuiSizeMax, 30); \
@@ -159,7 +159,7 @@ public:
         ui->update_func = [this]() -> float { auto v = entity.getComponent<COMPONENT>(); if (v) return v->VALUE; return 0.0f; }; \
     } while(0)
 #define ADD_INT_SLIDER_TWEAK(LABEL, COMPONENT, MIN_VALUE, MAX_VALUE, VALUE) do { \
-        auto row = new GuiElement(new_page->contents, ""); \
+        auto row = new GuiElement(new_page->tweaks, ""); \
         row->setSize(GuiElement::GuiSizeMax, 30)->setAttribute("layout", "horizontal"); \
         auto label = new GuiLabel(row, "", LABEL, 20); \
         label->setAlignment(sp::Alignment::CenterRight)->setSize(GuiElement::GuiSizeMax, 30); \
@@ -170,7 +170,7 @@ public:
         ui->update_func = [this]() -> float { auto v = entity.getComponent<COMPONENT>(); if (v) return v->VALUE; return 0u; }; \
     } while(0)
 #define ADD_BOOL_TWEAK(LABEL, COMPONENT, VALUE) do { \
-        auto row = new GuiElement(new_page->contents, ""); \
+        auto row = new GuiElement(new_page->tweaks, ""); \
         row->setSize(GuiElement::GuiSizeMax, 30)->setAttribute("layout", "horizontal"); \
         auto label = new GuiLabel(row, "", LABEL, 20); \
         label->setAlignment(sp::Alignment::CenterRight)->setSize(GuiElement::GuiSizeMax, 30); \
@@ -178,7 +178,7 @@ public:
         ui->update_func = [this]() -> bool { auto v = entity.getComponent<COMPONENT>(); if (v) return v->VALUE; return false; }; \
     } while(0)
 #define ADD_VECTOR(LABEL, COMPONENT, VECTOR) do { \
-        auto row = new GuiElement(new_page->contents, ""); \
+        auto row = new GuiElement(new_page->tweaks, ""); \
         row->setSize(GuiElement::GuiSizeMax, 30)->setAttribute("layout", "horizontal"); \
         auto label = new GuiLabel(row, "", LABEL, 20); \
         label->setAlignment(sp::Alignment::CenterRight)->setSize(GuiElement::GuiSizeMax, 30); \
@@ -186,11 +186,11 @@ public:
         vector_selector->update_func = [this]() -> size_t { auto v = entity.getComponent<COMPONENT>(); if (v) return v->VECTOR.size(); return 0; }; \
         auto add = new GuiButton(row, "", "Add", [this, vector_selector](){ auto v = entity.getComponent<COMPONENT>(); if (v) { v->VECTOR.emplace_back(); vector_selector->setSelectionIndex(v->VECTOR.size()); } }); \
         add->setTextSize(20)->setSize(50, 30); \
-        auto del = new GuiButton(row, "", "Del", [this](){ auto v = entity.getComponent<COMPONENT>(); if (v) v->VECTOR.pop_back(); }); \
+        auto del = new GuiButton(row, "", "Del", [this](){ auto v = entity.getComponent<COMPONENT>(); if (v && v->VECTOR.size() > 0) v->VECTOR.pop_back(); }); \
         del->setTextSize(20)->setSize(50, 30); \
     } while(0)
 #define ADD_VECTOR_NUM_TEXT_TWEAK(LABEL, COMPONENT, VECTOR, VALUE) do { \
-        auto row = new GuiElement(new_page->contents, ""); \
+        auto row = new GuiElement(new_page->tweaks, ""); \
         row->setSize(GuiElement::GuiSizeMax, 30)->setAttribute("layout", "horizontal"); \
         auto label = new GuiLabel(row, "", LABEL, 20); \
         label->setAlignment(sp::Alignment::CenterRight)->setSize(GuiElement::GuiSizeMax, 30); \
@@ -206,7 +206,7 @@ public:
         }); \
     } while(0)
 #define ADD_VECTOR_BOOL_TWEAK(LABEL, COMPONENT, VECTOR, VALUE) do { \
-        auto row = new GuiElement(new_page->contents, ""); \
+        auto row = new GuiElement(new_page->tweaks, ""); \
         row->setSize(GuiElement::GuiSizeMax, 30)->setAttribute("layout", "horizontal"); \
         auto label = new GuiLabel(row, "", LABEL, 20); \
         label->setAlignment(sp::Alignment::CenterRight)->setSize(GuiElement::GuiSizeMax, 30); \
@@ -219,7 +219,7 @@ public:
             return false; }; \
     } while(0)
 #define ADD_VECTOR_TOGGLE_MASK_TWEAK(LABEL, COMPONENT, VECTOR, VALUE, MASK) do { \
-        auto row = new GuiElement(new_page->contents, ""); \
+        auto row = new GuiElement(new_page->tweaks, ""); \
         row->setSize(GuiElement::GuiSizeMax, 30)->setAttribute("layout", "horizontal"); \
         auto label = new GuiLabel(row, "", LABEL, 20); \
         label->setAlignment(sp::Alignment::CenterRight)->setSize(GuiElement::GuiSizeMax, 30); \
@@ -233,7 +233,7 @@ public:
             return false; }; \
     } while(0)
 #define ADD_VECTOR_NUM_SLIDER_TWEAK(LABEL, COMPONENT, VECTOR, MIN_VALUE, MAX_VALUE, VALUE) do { \
-        auto row = new GuiElement(new_page->contents, ""); \
+        auto row = new GuiElement(new_page->tweaks, ""); \
         row->setSize(GuiElement::GuiSizeMax, 30)->setAttribute("layout", "horizontal"); \
         auto label = new GuiLabel(row, "", LABEL, 20); \
         label->setAlignment(sp::Alignment::CenterRight)->setSize(GuiElement::GuiSizeMax, 30); \
@@ -250,7 +250,7 @@ public:
         }; \
     } while(0)
 #define ADD_VECTOR_ENUM_TWEAK(LABEL, COMPONENT, VECTOR, VALUE, MIN_VALUE, MAX_VALUE, STRING_CONVERT_FUNCTION) do { \
-        auto row = new GuiElement(new_page->contents, ""); \
+        auto row = new GuiElement(new_page->tweaks, ""); \
         row->setSize(GuiElement::GuiSizeMax, 30)->setAttribute("layout", "horizontal"); \
         auto label = new GuiLabel(row, "", LABEL, 20); \
         label->setAlignment(sp::Alignment::CenterRight)->setSize(GuiElement::GuiSizeMax, 30); \
@@ -282,8 +282,12 @@ GuiEntityTweak::GuiEntityTweak(GuiContainer* owner)
 {
     setPosition(0, -100, sp::Alignment::BottomCenter);
     setSize(1000, 700);
+    setAttribute("padding", "20");
 
-    GuiListbox* list = new GuiListbox(this, "", [this](int index, string value)
+    content = new GuiElement(this, "GM_TWEAK_DIALOG_CONTENT");
+    content->setSize(GuiElement::GuiSizeMax,GuiElement::GuiSizeMax)->setAttribute("layout", "horizontal");
+
+    GuiListbox* list = new GuiListbox(content, "", [this](int index, string value)
     {
         for(GuiTweakPage* page : pages)
             page->hide();
@@ -291,10 +295,87 @@ GuiEntityTweak::GuiEntityTweak(GuiContainer* owner)
     });
 
     list->setSize(300, GuiElement::GuiSizeMax);
-    list->setPosition(25, 25, sp::Alignment::TopLeft);
+    list->setPosition(0, 0, sp::Alignment::TopLeft);
 
     GuiTweakPage* new_page;
     GuiVectorTweak* vector_selector;
+
+    // Transform component, custom implementation since it uses functions
+    // instead of direct access to members
+    ADD_PAGE(tr("tweak-tab", "Transform"), sp::Transform);
+    {
+        // Position X text field
+        auto row = new GuiElement(new_page->tweaks, "");
+        row
+            ->setSize(GuiElement::GuiSizeMax, 30.0f)
+            ->setAttribute("layout", "horizontal");
+        auto label = new GuiLabel(row, "", tr("tweak-text", "Position X:"), 20.0f);
+        label
+            ->setAlignment(sp::Alignment::CenterRight)
+            ->setSize(GuiElement::GuiSizeMax, 30.0f);
+        auto ui = new GuiTextTweak(row);
+        ui->update_func = [this]() -> string {
+            if (auto t = entity.getComponent<sp::Transform>())
+                return string(t->getPosition().x, 1);
+
+            return "";
+        };
+        ui->callback([this](string text) {
+            if (auto t = entity.getComponent<sp::Transform>())
+                t->setPosition(glm::vec2(text.toFloat(), t->getPosition().y));
+        });
+    }
+    {
+        // Position Y text field
+        auto row = new GuiElement(new_page->tweaks, "");
+        row
+            ->setSize(GuiElement::GuiSizeMax, 30.0f)
+            ->setAttribute("layout", "horizontal");
+        auto label = new GuiLabel(row, "", tr("tweak-text", "Position Y:"), 20.0f);
+        label
+            ->setAlignment(sp::Alignment::CenterRight)
+            ->setSize(GuiElement::GuiSizeMax, 30.0f);
+        auto ui = new GuiTextTweak(row);
+        ui->update_func = [this]() -> string {
+            if (auto t = entity.getComponent<sp::Transform>())
+                return string(t->getPosition().y, 1);
+
+            return "";
+        };
+        ui->callback([this](string text) {
+            if (auto t = entity.getComponent<sp::Transform>())
+                t->setPosition(glm::vec2(t->getPosition().x, text.toFloat()));
+        });
+    }
+    {
+        // Rotation slider
+        auto row = new GuiElement(new_page->tweaks, "");
+        row
+            ->setSize(GuiElement::GuiSizeMax, 30.0f)
+            ->setAttribute("layout", "horizontal");
+        auto label = new GuiLabel(row, "", tr("tweak-text", "Rotation:"), 20.0f);
+        label
+            ->setAlignment(sp::Alignment::CenterRight)
+            ->setSize(GuiElement::GuiSizeMax, 30.0f);
+        auto ui = new GuiSliderTweak(row, "", -180.0f, 180.0f, 0.0f,
+            [this](float value)
+            {
+                if (auto t = entity.getComponent<sp::Transform>())
+                    t->setRotation(value);
+            }
+        );
+        ui->addOverlay(1u, 20.0f);
+        ui->update_func = [this]() -> float {
+            if (auto t = entity.getComponent<sp::Transform>())
+                return t->getRotation();
+
+            return 0.0f;
+        };
+    }
+
+    // Physics component
+    ADD_PAGE(tr("tweak-tab", "Physics"), sp::Physics);
+    // TODO: Figure out how to set Physics values
 
     ADD_PAGE(tr("tweak-tab", "Callsign"), CallSign);
     ADD_TEXT_TWEAK(tr("tweak-text", "Callsign:"), CallSign, callsign);
@@ -331,7 +412,7 @@ GuiEntityTweak::GuiEntityTweak(GuiContainer* owner)
     ADD_NUM_TEXT_TWEAK(tr("tweak-text", "Seconds to full recharge from 0:"), CombatManeuveringThrusters, charge_time);
 
     ADD_PAGE(tr("tweak-tab", "Beam system"), BeamWeaponSys);
-    ADD_INT_SLIDER_TWEAK(tr("tweak-text", "Frequency:"), BeamWeaponSys, 0u, 20u, frequency);
+    ADD_INT_SLIDER_TWEAK(tr("tweak-text", "Frequency:"), BeamWeaponSys, 0u, BeamWeaponSys::max_frequency, frequency);
     ADD_LABEL(tr("tweak-text", "Beam weapons system"));
     ADD_SHIP_SYSTEM_TWEAK(BeamWeaponSys);
 
@@ -447,7 +528,7 @@ GuiEntityTweak::GuiEntityTweak(GuiContainer* owner)
 
     for(GuiTweakPage* page : pages)
     {
-        page->setSize(700, 700)->setPosition(0, 0, sp::Alignment::BottomRight)->hide();
+        page->setSize(GuiElement::GuiSizeMax, GuiElement::GuiSizeMax)->hide();
     }
 
     pages[0]->show();
@@ -455,7 +536,7 @@ GuiEntityTweak::GuiEntityTweak(GuiContainer* owner)
 
     (new GuiButton(this, "CLOSE_BUTTON", tr("button", "Close"), [this]() {
         hide();
-    }))->setTextSize(20)->setPosition(-10, 0, sp::Alignment::TopRight)->setSize(70, 30);
+    }))->setTextSize(20)->setPosition(10, -20, sp::Alignment::TopRight)->setSize(70, 30);
 }
 
 void GuiEntityTweak::open(sp::ecs::Entity e)
@@ -475,11 +556,11 @@ GuiTweakPage::GuiTweakPage(GuiContainer* owner)
         else
             add_component(entity);
     });
-    add_remove_button->setSize(300, 50)->setPosition(0, 15, sp::Alignment::TopCenter);
+    add_remove_button->setSize(300, 50)->setAttribute("alignment", "topcenter");
 
-    contents = new GuiElement(this, "CONTENT");
-    contents->setPosition(0, 75, sp::Alignment::TopLeft)->setSize(GuiElement::GuiSizeMax, GuiElement::GuiSizeMax)->setAttribute("layout", "vertical");
-    contents->setMargins(30, 0);
+    tweaks = new GuiElement(this, "TWEAKS");
+    tweaks->setPosition(0, 75, sp::Alignment::TopLeft)->setSize(GuiElement::GuiSizeMax, GuiElement::GuiSizeMax)->setAttribute("layout", "vertical");
+    tweaks->setMargins(30, 0);
 }
 
 void GuiTweakPage::open(sp::ecs::Entity e)
@@ -491,9 +572,9 @@ void GuiTweakPage::onDraw(sp::RenderTarget& target)
 {
     if (has_component(entity)) {
         add_remove_button->setText(tr("tweak-button", "Remove component"));
-        contents->show();
+        tweaks->show();
     } else {
         add_remove_button->setText(tr("tweak-button", "Create component"));
-        contents->hide();
+        tweaks->hide();
     }
 }

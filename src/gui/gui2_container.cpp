@@ -50,7 +50,7 @@ void GuiContainer::drawDebugElements(sp::Rect parent_rect, sp::RenderTarget& ren
         if (element->visible)
         {
             renderer.fillRect(element->rect, glm::u8vec4(255, 255, 255, 5));
-            //TODO_GFX: renderer.outlineRect(element->rect, glm::u8vec4(255, 0, 255, 255));
+            renderer.outlineRect(element->rect, glm::u8vec4(255, 0, 255, 255));
 
             element->drawDebugElements(element->rect, renderer);
 
@@ -155,7 +155,7 @@ void GuiContainer::setAttribute(const string& key, const string& value)
     {
         auto p = value.partition(",");
         layout.position.x = p.first.strip().toFloat();
-        layout.position.y = p.first.strip().toFloat();
+        layout.position.y = p.second.strip().toFloat();
     }
     else if (key == "margin")
     {

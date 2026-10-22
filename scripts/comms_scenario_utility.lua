@@ -244,7 +244,7 @@ function isObjectType(obj,typ)
 				elseif typ == "ScanProbe" then
 					return obj.components.allow_radar_link
 				elseif typ == "CpuShip" then
-					return obj.ai_controller
+					return obj.components.ai_controller
 				elseif typ == "Asteroid" then
 					return obj.components.mesh_render and string.sub(obj.components.mesh_render.mesh, 7) == "Astroid"
 				else
@@ -918,6 +918,8 @@ end
 --			combat maneuver, hacking, scanning, self destruct, probe launch
 --		include_goods_for_sale_in_status - set true if you want the goods that a station
 --			sells to appear in the status report
+--		include_goods_wanted_in_status - set to true to list the goods the station will
+--			buy in the status report
 --		upgrade_button_in_status - set true if you want the status report to include a
 --			list of systems that can be upgraded, eg beams, missiles, impulse, ftl,
 --			shields. Stock player ships don't qualify for upgrades.
@@ -1007,7 +1009,7 @@ function stationStatusReport()
 			local goods_available = false
 			if comms_target.comms_data.goods ~= nil then
 				for good, good_data in pairs(comms_target.comms_data.goods) do
-					if good_data["quantity"] > 0 then
+					if good_data["quantity"] ~= nil and good_data["quantity"] > 0 then
 						goods_available = true
 						break
 					end
@@ -1018,6 +1020,25 @@ function stationStatusReport()
 				for good, good_data in pairs(comms_target.comms_data.goods) do
 					if good_data["quantity"] > 0 then
 						msg = string.format(_("situationReport-comms","%s %s@%s"),msg,good_desc[good],good_data["cost"])
+					end
+				end
+			end
+		end
+		if include_goods_wanted_in_status then
+			local goods_desired = false
+			if comms_target.comms_data.buy ~= nil then
+				for good, price in pairs(comms_target.comms_data.buy) do
+					if price ~= nil and price > 0 then
+						goods_desired = true
+						break
+					end
+				end
+			end
+			if goods_desired then
+				msg = string.format(_("situationReport-comms","%s\nWill buy these goods:"),msg)
+				for good, price in pairs(comms_target.comms_data.buy) do
+					if price ~= nil and price > 0 then
+						msg = string.format(_("situationReport-comms","%s %s@%s"),msg,good_desc[good],price)
 					end
 				end
 			end
@@ -1778,10 +1799,10 @@ function requestJonque()
 			else
 				for n=1,comms_source:getWaypointCount() do
 					local rendezvous_prompts = {
-						string.format(_("stationAssist-comms","Rendezvous at waypoint %i"),n),
-						string.format(_("stationAssist-comms","Tell jonque to meet at waypoint %i"),n),
-						string.format(_("stationAssist-comms","Jonque to rendezvous at waypoint %i"),n),
-						string.format(_("stationAssist-comms","Have the service jonque meet us at waypoint %i"),n)
+						string.format(_("stationAssist-comms","Rendezvous at waypoint %i"),comms_source:getWaypointID(n)),
+						string.format(_("stationAssist-comms","Tell jonque to meet at waypoint %i"),comms_source:getWaypointID(n)),
+						string.format(_("stationAssist-comms","Jonque to rendezvous at waypoint %i"),comms_source:getWaypointID(n)),
+						string.format(_("stationAssist-comms","Have the service jonque meet us at waypoint %i"),comms_source:getWaypointID(n))
 					}
 					addCommsReply(tableSelectRandom(rendezvous_prompts),function()
 						if comms_source:takeReputationPoints(getServiceCost("servicejonque")) then
@@ -1944,16 +1965,16 @@ function commsStationReinforcements()
 					}
 					setCommsMessage(tableSelectRandom(direct_to_what_waypoint))
 					for n = 1, comms_source:getWaypointCount() do
-						addCommsReply(string.format(_("stationAssist-comms", "Waypoint %d"), n),function()
+						addCommsReply(string.format(_("stationAssist-comms", "Waypoint %d"), comms_source:getWaypointID(n)),function()
 							if comms_source:takeReputationPoints(info.cost) then
 								local ship = CpuShip():setFactionId(comms_target:getFactionId()):setPosition(comms_target:getPosition()):setTemplate(info.template):setScanned(true):orderDefendLocation(comms_source:getWaypoint(n))
 								suffix_index = math.random(11,77)
 								ship:setCallSign(generateCallSign(nil,comms_target:getFaction()))
 								local sent_reinforcements = {
-									string.format(_("stationAssist-comms","We have dispatched %s to assist at waypoint %s"),ship:getCallSign(),n),
-									string.format(_("stationAssist-comms","%s is heading for waypoint %s"),ship:getCallSign(),n),
-									string.format(_("stationAssist-comms","%s has been sent to waypoint %s"),ship:getCallSign(),n),
-									string.format(_("stationAssist-comms","We ordered %s to help at waypoint %s"),ship:getCallSign(),n),
+									string.format(_("stationAssist-comms","We have dispatched %s to assist at waypoint %s"),ship:getCallSign(),comms_source:getWaypointID(n)),
+									string.format(_("stationAssist-comms","%s is heading for waypoint %s"),ship:getCallSign(),comms_source:getWaypointID(n)),
+									string.format(_("stationAssist-comms","%s has been sent to waypoint %s"),ship:getCallSign(),comms_source:getWaypointID(n)),
+									string.format(_("stationAssist-comms","We ordered %s to help at waypoint %s"),ship:getCallSign(),comms_source:getWaypointID(n)),
 								}
 								setCommsMessage(tableSelectRandom(sent_reinforcements))
 							else
@@ -2038,7 +2059,7 @@ function requestSupplyDrop()
 				}
 				setCommsMessage(tableSelectRandom(point_supplies))
 				for n=1,comms_source:getWaypointCount() do
-					addCommsReply(string.format(_("stationAssist-comms","Waypoint %i"),n), function()
+					addCommsReply(string.format(_("stationAssist-comms","Waypoint %i"),comms_source:getWaypointID(n)), function()
 						if comms_source:takeReputationPoints(getServiceCost("supplydrop")) then
 							local position_x, position_y = comms_target:getPosition()
 							local target_x, target_y = comms_source:getWaypoint(n)
@@ -2047,10 +2068,10 @@ function requestSupplyDrop()
 							script:setVariable("target_x", target_x):setVariable("target_y", target_y)
 							script:setVariable("faction_id", comms_target:getFactionId()):run("supply_drop.lua")
 							local supply_ship_en_route = {
-								string.format(_("stationAssist-comms","We have dispatched a supply ship toward waypoint %d"),n),
-								string.format(_("stationAssist-comms","We sent a supply ship to waypoint %i"),n),
-								string.format(_("stationAssist-comms","There's a ship headed for %i with your supplies"),n),
-								string.format(_("stationAssist-comms","A ship should be arriving soon at waypoint %i with your supplies"),n)
+								string.format(_("stationAssist-comms","We have dispatched a supply ship toward waypoint %d"),comms_source:getWaypointID(n)),
+								string.format(_("stationAssist-comms","We sent a supply ship to waypoint %i"),comms_source:getWaypointID(n)),
+								string.format(_("stationAssist-comms","There's a ship headed for %i with your supplies"),comms_source:getWaypointID(n)),
+								string.format(_("stationAssist-comms","A ship should be arriving soon at waypoint %i with your supplies"),comms_source:getWaypointID(n))
 							}
 							setCommsMessage(tableSelectRandom(supply_ship_en_route))
 						else
@@ -2096,7 +2117,7 @@ function requestSupplyDrop()
 						}
 						setCommsMessage(tableSelectRandom(point_supplies))
 						for n=1,comms_source:getWaypointCount() do
-							addCommsReply(string.format(_("stationAssist-comms","Waypoint %i"),n), function()
+							addCommsReply(string.format(_("stationAssist-comms","Waypoint %i"),comms_source:getWaypointID(n)), function()
 								if comms_source:takeReputationPoints(getServiceCost("jumpsupplydrop")) then
 									local position_x, position_y = comms_target:getPosition()
 									local target_x, target_y = comms_source:getWaypoint(n)
@@ -2106,10 +2127,10 @@ function requestSupplyDrop()
 									script:setVariable("jump_freighter","yes")
 									script:setVariable("faction_id", comms_target:getFactionId()):run("supply_drop.lua")
 									local supply_ship_en_route = {
-										string.format(_("stationAssist-comms","We have dispatched a supply ship with a jump drivetoward waypoint %d"),n),
-										string.format(_("stationAssist-comms","We sent a supply ship with a jump drive to waypoint %i"),n),
-										string.format(_("stationAssist-comms","There's a ship with a jump drive headed for %i with your supplies"),n),
-										string.format(_("stationAssist-comms","A jump ship should be arriving soon at waypoint %i with your supplies"),n)
+										string.format(_("stationAssist-comms","We have dispatched a supply ship with a jump drivetoward waypoint %d"),comms_source:getWaypointID(n)),
+										string.format(_("stationAssist-comms","We sent a supply ship with a jump drive to waypoint %i"),comms_source:getWaypointID(n)),
+										string.format(_("stationAssist-comms","There's a ship with a jump drive headed for %i with your supplies"),comms_source:getWaypointID(n)),
+										string.format(_("stationAssist-comms","A jump ship should be arriving soon at waypoint %i with your supplies"),comms_source:getWaypointID(n))
 									}
 									setCommsMessage(tableSelectRandom(supply_ship_en_route))
 								else
@@ -2171,7 +2192,7 @@ function requestSupplyDrop()
 							}
 							setCommsMessage(tableSelectRandom(point_supplies))
 							for n=1,comms_source:getWaypointCount() do
-								addCommsReply(string.format(_("stationAssist-comms","Waypoint %i"),n), function()
+								addCommsReply(string.format(_("stationAssist-comms","Waypoint %i"),comms_source:getWaypointID(n)), function()
 									if comms_source:takeReputationPoints(getServiceCost("flingsupplydrop")) then
 										local target_x, target_y = comms_source:getWaypoint(n)
 										local target_angle = random(0,360)
@@ -2218,7 +2239,7 @@ function requestSupplyDrop()
 							}
 							setCommsMessage(tableSelectRandom(point_supplies))
 							for n=1,comms_source:getWaypointCount() do
-								addCommsReply(string.format(_("stationAssist-comms","Waypoint %i"),n), function()
+								addCommsReply(string.format(_("stationAssist-comms","Waypoint %i"),comms_source:getWaypointID(n)), function()
 									if comms_source:takeReputationPoints(getServiceCost("flingsupplydrop") + (getWeaponCost("HVLI")*5)) then
 										local target_x, target_y = comms_source:getWaypoint(n)
 										local target_angle = random(0,360)
@@ -2265,7 +2286,7 @@ function requestSupplyDrop()
 							}
 							setCommsMessage(tableSelectRandom(point_supplies))
 							for n=1,comms_source:getWaypointCount() do
-								addCommsReply(string.format(_("stationAssist-comms","Waypoint %i"),n), function()
+								addCommsReply(string.format(_("stationAssist-comms","Waypoint %i"),comms_source:getWaypointID(n)), function()
 									if comms_source:takeReputationPoints(getServiceCost("flingsupplydrop") + 100) then
 										local target_x, target_y = comms_source:getWaypoint(n)
 										local target_angle = random(0,360)
@@ -2316,7 +2337,7 @@ function requestSupplyDrop()
 							}
 							setCommsMessage(tableSelectRandom(point_supplies))
 							for n=1,comms_source:getWaypointCount() do
-								addCommsReply(string.format(_("stationAssist-comms","Waypoint %i"),n), function()
+								addCommsReply(string.format(_("stationAssist-comms","Waypoint %i"),comms_source:getWaypointID(n)), function()
 									if comms_source:takeReputationPoints(getServiceCost("flingsupplydrop") + 20) then
 										local target_x, target_y = comms_source:getWaypoint(n)
 										local target_angle = random(0,360)
@@ -2394,7 +2415,7 @@ function requestSupplyDrop()
 									}
 									setCommsMessage(tableSelectRandom(point_supplies))
 									for n=1,comms_source:getWaypointCount() do
-										addCommsReply(string.format(_("stationAssist-comms","Waypoint %i"),n), function()
+										addCommsReply(string.format(_("stationAssist-comms","Waypoint %i"),comms_source:getWaypointID(n)), function()
 											local hire_cost = 0
 											if comms_source:isFriendly(comms_target) then
 												hire_cost = comms_target.comms_data.available_repair_crew_cost_friendly
@@ -2490,7 +2511,7 @@ function requestSupplyDrop()
 									}
 									setCommsMessage(tableSelectRandom(point_supplies))
 									for n=1,comms_source:getWaypointCount() do
-										addCommsReply(string.format(_("stationAssist-comms","Waypoint %i"),n), function()
+										addCommsReply(string.format(_("stationAssist-comms","Waypoint %i"),comms_source:getWaypointID(n)), function()
 											local coolant_cost = 0
 											if comms_source:isFriendly(comms_target) then
 												coolant_cost = comms_target.comms_data.coolant_inventory_cost_friendly
@@ -4198,9 +4219,15 @@ function stellarCartography()
 											station_details = string.format(_("cartographyOffice-comms","%s %s"),station_details,obj.comms_data.orbit)
 										end
 										if obj.comms_data.goods ~= nil then
-											station_details = string.format(_("cartographyOffice-comms","%s\nGood, quantity, cost"),station_details)
+											station_details = string.format(_("cartographyOffice-comms","%s\nStation sells: (good, quantity, cost)"),station_details)
 											for good, good_data in pairs(obj.comms_data.goods) do
 												station_details = string.format(_("cartographyOffice-comms","%s\n   %s, %i, %i"),station_details,good_desc[good],good_data["quantity"],good_data["cost"])
+											end
+										end
+										if obj.comms_data.buy ~= nil then
+											station_details = string.format(_("cartographyOffice-comms","%s\nStation buys: (good, price)"),station_details)
+											for good,price in pairs(obj.comms_data.buy) do
+												station_details = string.format(_("cartographyOffice-comms","%s\n   %s, %i"),station_details,good_desc[good],math.floor(price))
 											end
 										end
 										if obj.comms_data.general_information ~= nil then
@@ -4265,9 +4292,15 @@ function stellarCartography()
 									station_details = string.format(_("cartographyOffice-comms","%s %s"),station_details,obj.comms_data.orbit)
 								end
 								if obj.comms_data.goods ~= nil then
-									station_details = string.format(_("cartographyOffice-comms","%s\nGood, quantity, cost"),station_details)
+									station_details = string.format(_("cartographyOffice-comms","%s\nStation sells: (good, quantity, cost)"),station_details)
 									for good, good_data in pairs(obj.comms_data.goods) do
 										station_details = string.format(_("cartographyOffice-comms","%s\n   %s, %i, %i"),station_details,good_desc[good],good_data["quantity"],good_data["cost"])
+									end
+								end
+								if obj.comms_data.buy ~= nil then
+									station_details = string.format(_("cartographyOffice-comms","%s\nStation buys: (good, price)"),station_details)
+									for good,price in pairs(obj.comms_data.buy) do
+										station_details = string.format(_("cartographyOffice-comms","%s\n   %s, %i"),station_details,good_desc[good],math.floor(price))
 									end
 								end
 								if obj.comms_data.general_information ~= nil then
@@ -4381,9 +4414,15 @@ function masterCartographer()
 									station_details = string.format(_("cartographyOffice-comms","%s %s"),station_details,obj.comms_data.orbit)
 								end
 								if obj.comms_data.goods ~= nil then
-									station_details = string.format(_("cartographyOffice-comms","%s\nGood, quantity, cost"),station_details)
+									station_details = string.format(_("cartographyOffice-comms","%s\nStation sells: (good, quantity, cost)"),station_details)
 									for good, good_data in pairs(obj.comms_data.goods) do
 										station_details = string.format(_("cartographyOffice-comms","%s\n   %s, %i, %i"),station_details,good_desc[good],good_data["quantity"],good_data["cost"])
+									end
+								end
+								if obj.comms_data.buy ~= nil then
+									station_details = string.format(_("cartographyOffice-comms","%s\nStation buys: (good, price)"),station_details)
+									for good,price in pairs(obj.comms_data.buy) do
+										station_details = string.format(_("cartographyOffice-comms","%s\n   %s, %i"),station_details,good_desc[good],math.floor(price))
 									end
 								end
 								if obj.comms_data.general_information ~= nil then
@@ -4460,9 +4499,15 @@ function masterCartographer()
 						station_details = string.format(_("cartographyOffice-comms","%s %s"),station_details,obj.comms_data.orbit)
 					end
 					if obj.comms_data.goods ~= nil then
-						station_details = string.format(_("cartographyOffice-comms","%s\nGood, quantity, cost"),station_details)
+						station_details = string.format(_("cartographyOffice-comms","%s\nStation sells: (good, quantity, cost)"),station_details)
 						for good, good_data in pairs(obj.comms_data.goods) do
 							station_details = string.format(_("cartographyOffice-comms","%s\n   %s, %i, %i"),station_details,good_desc[good],good_data["quantity"],good_data["cost"])
+						end
+					end
+					if obj.comms_data.buy ~= nil then
+						station_details = string.format(_("cartographyOffice-comms","%s\nStation buys: (good, price)"),station_details)
+						for good,price in pairs(obj.comms_data.buy) do
+							station_details = string.format(_("cartographyOffice-comms","%s\n   %s, %i"),station_details,good_desc[good],math.floor(price))
 						end
 					end
 					if obj.comms_data.general_information ~= nil then
@@ -7828,7 +7873,7 @@ function minorUpgrades()
 											comms_source:setBeamWeaponTurret(beam.index,beam.tarc,beam.dir,beam.tspd)
 										end
 										comms_source:setBeamWeaponDamageType(beam.index,"emp")
-										comms_source:setBeamWeaponArcColor(beam.index,0,0,128,0,0,255)
+										comms_source:setBeamWeaponArcColor(beam.index,0,0,0.5,0,0,1.0)
 									end
 									comms_source.beams_for_shields = true
 									local beams_for_shields_installed = {
@@ -8163,6 +8208,7 @@ function sellGoodsToStation()
 		_("trade-comms","You may choose from these to sell."),
 		_("trade-comms","What do you want to sell?"),
 	}
+	setCommsMessage(tableSelectRandom(sell_goods_prompt))
 	local good_match_count = 0
 	if comms_target.comms_data.buy ~= nil then
 		for good, price in pairs(comms_target.comms_data.buy) do
@@ -8203,7 +8249,7 @@ function sellGoodsToStation()
 						string.format(_("trade-comms","You sold one to %s"),comms_target:getCallSign()),
 						string.format(_("trade-comms","%s bought one from you"),comms_target:getCallSign()),
 					}
-					setCommsMessage(string.format(_("trade-comms","%s, %s\n%s"),tableRemoveRandom(good_type_label),tableRemoveRandom(reputation_price_of_good),tableRemoveRandom(sale_results)))
+					setCommsMessage(string.format(_("trade-comms","%s, %s\n%s"),tableSelectRandom(good_type_label),tableSelectRandom(reputation_price_of_good),tableSelectRandom(sale_results)))
 					comms_source.goods[good] = comms_source.goods[good] - 1
 					comms_source:addReputationPoints(price)
 					comms_source.cargo = comms_source.cargo + 1
@@ -8745,13 +8791,13 @@ function friendlyShipComms()
 			}
 			setCommsMessage(tableSelectRandom(defend_what_waypoint))
 			for n=1,comms_source:getWaypointCount() do
-				addCommsReply(string.format(_("shipAssist-comms", "Defend waypoint %d"), n), function()
+				addCommsReply(string.format(_("shipAssist-comms", "Defend waypoint %d"), comms_source:getWaypointID(n)), function()
 					comms_target:orderDefendLocation(comms_source:getWaypoint(n))
 					local defend_wp_confirmation = {
-						string.format(_("shipAssist-comms", "We are heading to assist at waypoint %d."), n),
-						string.format(_("shipAssist-comms", "Changing course to assist at waypoint %d."), n),
-						string.format(_("shipAssist-comms", "Moving to assist at waypoint %d."), n),
-						string.format(_("shipAssist-comms", "%s is changing course to assist at waypoint %d."),comms_target:getCallSign(), n),
+						string.format(_("shipAssist-comms", "We are heading to assist at waypoint %d."), comms_source:getWaypointID(n)),
+						string.format(_("shipAssist-comms", "Changing course to assist at waypoint %d."), comms_source:getWaypointID(n)),
+						string.format(_("shipAssist-comms", "Moving to assist at waypoint %d."), comms_source:getWaypointID(n)),
+						string.format(_("shipAssist-comms", "%s is changing course to assist at waypoint %d."),comms_target:getCallSign(), comms_source:getWaypointID(n)),
 					}
 					setCommsMessage(tableSelectRandom(defend_wp_confirmation));
 					addCommsReply(_("Back"), commsShip)
@@ -8895,6 +8941,21 @@ function friendlyShipComms()
 										}
 										setCommsMessage(tableSelectRandom(trade_confirmation))
 										comms_target.comms_data.friendlyness = math.min(100,comms_target.comms_data.friendlyness + random(2,5))
+										if update_ship_manifest then
+											local manifest = _("scienceDescription","Manifest:")
+											for good,details in pairs(comms_target.comms_data.goods) do
+												if details.quantity ~= nil and details.quantity > 0 then
+													manifest = string.format("%s %s",manifest,good_desc[good])
+												end
+											end
+											if manifest == _("scienceDescription","Manifest:") then
+												manifest = _("scienceDescription","Manifest: empty")
+											end
+											comms_target:setDescriptionForScanState("notscanned","")
+											comms_target:setDescriptionForScanState("friendorfoeidentified",_("scienceDescription","Commercial Freighter"))
+											comms_target:setDescriptionForScanState("simplescan",_("scienceDescription","Commercial Freighter"))
+											comms_target:setDescriptionForScanState("fullscan",manifest)	
+										end
 										addCommsReply(_("Back"), commsShip)
 									end)
 								end
@@ -8921,6 +8982,21 @@ function friendlyShipComms()
 										end
 										comms_source.goods[good] = comms_source.goods[good] + 1
 										comms_source.cargo = comms_source.cargo - 1
+										if update_ship_manifest then
+											local manifest = _("scienceDescription","Manifest:")
+											for good,details in pairs(comms_target.comms_data.goods) do
+												if details.quantity ~= nil and details.quantity > 0 then
+													manifest = string.format("%s %s",manifest,good_desc[good])
+												end
+											end
+											if manifest == _("scienceDescription","Manifest:") then
+												manifest = _("scienceDescription","Manifest: empty")
+											end
+											comms_target:setDescriptionForScanState("notscanned","")
+											comms_target:setDescriptionForScanState("friendorfoeidentified",_("scienceDescription","Commercial Freighter"))
+											comms_target:setDescriptionForScanState("simplescan",_("scienceDescription","Commercial Freighter"))
+											comms_target:setDescriptionForScanState("fullscan",manifest)	
+										end
 										local purchase_results = {
 											string.format(_("trade-comms","One %s bought"),good_desc[good]),
 											string.format(_("trade-comms","You bought one %s"),good_desc[good]),
@@ -8966,6 +9042,21 @@ function friendlyShipComms()
 											end
 											comms_source.goods[good] = comms_source.goods[good] + 1
 											comms_source.cargo = comms_source.cargo - 1
+											if update_ship_manifest then
+												local manifest = _("scienceDescription","Manifest:")
+												for good,details in pairs(comms_target.comms_data.goods) do
+													if details.quantity ~= nil and details.quantity > 0 then
+														manifest = string.format("%s %s",manifest,good_desc[good])
+													end
+												end
+												if manifest == _("scienceDescription","Manifest:") then
+													manifest = _("scienceDescription","Manifest: empty")
+												end
+												comms_target:setDescriptionForScanState("notscanned","")
+												comms_target:setDescriptionForScanState("friendorfoeidentified",_("scienceDescription","Commercial Freighter"))
+												comms_target:setDescriptionForScanState("simplescan",_("scienceDescription","Commercial Freighter"))
+												comms_target:setDescriptionForScanState("fullscan",manifest)	
+											end
 											local purchase_results = {
 												string.format(_("trade-comms","One %s bought"),good_desc[good]),
 												string.format(_("trade-comms","You bought one %s"),good_desc[good]),
@@ -9008,6 +9099,21 @@ function friendlyShipComms()
 											end
 											comms_source.goods[good] = comms_source.goods[good] + 1
 											comms_source.cargo = comms_source.cargo - 1
+											if update_ship_manifest then
+												local manifest = _("scienceDescription","Manifest:")
+												for good,details in pairs(comms_target.comms_data.goods) do
+													if details.quantity ~= nil and details.quantity > 0 then
+														manifest = string.format("%s %s",manifest,good_desc[good])
+													end
+												end
+												if manifest == _("scienceDescription","Manifest:") then
+													manifest = _("scienceDescription","Manifest: empty")
+												end
+												comms_target:setDescriptionForScanState("notscanned","")
+												comms_target:setDescriptionForScanState("friendorfoeidentified",_("scienceDescription","Commercial Freighter"))
+												comms_target:setDescriptionForScanState("simplescan",_("scienceDescription","Commercial Freighter"))
+												comms_target:setDescriptionForScanState("fullscan",manifest)	
+											end
 											local purchase_results = {
 												string.format(_("trade-comms","One %s bought"),good_desc[good]),
 												string.format(_("trade-comms","You bought one %s"),good_desc[good]),
@@ -9054,6 +9160,21 @@ function friendlyShipComms()
 											end
 											comms_source.goods[good] = comms_source.goods[good] + 1
 											comms_source.cargo = comms_source.cargo - 1
+											if update_ship_manifest then
+												local manifest = _("scienceDescription","Manifest:")
+												for good,details in pairs(comms_target.comms_data.goods) do
+													if details.quantity ~= nil and details.quantity > 0 then
+														manifest = string.format("%s %s",manifest,good_desc[good])
+													end
+												end
+												if manifest == _("scienceDescription","Manifest:") then
+													manifest = _("scienceDescription","Manifest: empty")
+												end
+												comms_target:setDescriptionForScanState("notscanned","")
+												comms_target:setDescriptionForScanState("friendorfoeidentified",_("scienceDescription","Commercial Freighter"))
+												comms_target:setDescriptionForScanState("simplescan",_("scienceDescription","Commercial Freighter"))
+												comms_target:setDescriptionForScanState("fullscan",manifest)	
+											end
 											local purchase_results = {
 												string.format(_("trade-comms","One %s bought"),good_desc[good]),
 												string.format(_("trade-comms","You bought one %s"),good_desc[good]),
@@ -9611,6 +9732,21 @@ function neutralComms()
 											end
 											comms_source.goods[good] = comms_source.goods[good] + 1
 											comms_source.cargo = comms_source.cargo - 1
+											if update_ship_manifest then
+												local manifest = _("scienceDescription","Manifest:")
+												for good,details in pairs(comms_target.comms_data.goods) do
+													if details.quantity ~= nil and details.quantity > 0 then
+														manifest = string.format("%s %s",manifest,good_desc[good])
+													end
+												end
+												if manifest == _("scienceDescription","Manifest:") then
+													manifest = _("scienceDescription","Manifest: empty")
+												end
+												comms_target:setDescriptionForScanState("notscanned","")
+												comms_target:setDescriptionForScanState("friendorfoeidentified",_("scienceDescription","Commercial Freighter"))
+												comms_target:setDescriptionForScanState("simplescan",_("scienceDescription","Commercial Freighter"))
+												comms_target:setDescriptionForScanState("fullscan",manifest)	
+											end
 											local purchase_results = {
 												string.format(_("trade-comms","One %s bought"),good_desc[good]),
 												string.format(_("trade-comms","You bought one %s"),good_desc[good]),
@@ -9655,6 +9791,21 @@ function neutralComms()
 											end
 											comms_source.goods[good] = comms_source.goods[good] + 1
 											comms_source.cargo = comms_source.cargo - 1
+											if update_ship_manifest then
+												local manifest = _("scienceDescription","Manifest:")
+												for good,details in pairs(comms_target.comms_data.goods) do
+													if details.quantity ~= nil and details.quantity > 0 then
+														manifest = string.format("%s %s",manifest,good_desc[good])
+													end
+												end
+												if manifest == _("scienceDescription","Manifest:") then
+													manifest = _("scienceDescription","Manifest: empty")
+												end
+												comms_target:setDescriptionForScanState("notscanned","")
+												comms_target:setDescriptionForScanState("friendorfoeidentified",_("scienceDescription","Commercial Freighter"))
+												comms_target:setDescriptionForScanState("simplescan",_("scienceDescription","Commercial Freighter"))
+												comms_target:setDescriptionForScanState("fullscan",manifest)	
+											end
 											local purchase_results = {
 												string.format(_("trade-comms","One %s bought"),good_desc[good]),
 												string.format(_("trade-comms","You bought one %s"),good_desc[good]),
@@ -9701,6 +9852,21 @@ function neutralComms()
 											end
 											comms_source.goods[good] = comms_source.goods[good] + 1
 											comms_source.cargo = comms_source.cargo - 1
+											if update_ship_manifest then
+												local manifest = _("scienceDescription","Manifest:")
+												for good,details in pairs(comms_target.comms_data.goods) do
+													if details.quantity ~= nil and details.quantity > 0 then
+														manifest = string.format("%s %s",manifest,good_desc[good])
+													end
+												end
+												if manifest == _("scienceDescription","Manifest:") then
+													manifest = _("scienceDescription","Manifest: empty")
+												end
+												comms_target:setDescriptionForScanState("notscanned","")
+												comms_target:setDescriptionForScanState("friendorfoeidentified",_("scienceDescription","Commercial Freighter"))
+												comms_target:setDescriptionForScanState("simplescan",_("scienceDescription","Commercial Freighter"))
+												comms_target:setDescriptionForScanState("fullscan",manifest)	
+											end
 											local purchase_results = {
 												string.format(_("trade-comms","One %s bought"),good_desc[good]),
 												string.format(_("trade-comms","You bought one %s"),good_desc[good]),
@@ -9745,6 +9911,21 @@ function neutralComms()
 											end
 											comms_source.goods[good] = comms_source.goods[good] + 1
 											comms_source.cargo = comms_source.cargo - 1
+											if update_ship_manifest then
+												local manifest = _("scienceDescription","Manifest:")
+												for good,details in pairs(comms_target.comms_data.goods) do
+													if details.quantity ~= nil and details.quantity > 0 then
+														manifest = string.format("%s %s",manifest,good_desc[good])
+													end
+												end
+												if manifest == _("scienceDescription","Manifest:") then
+													manifest = _("scienceDescription","Manifest: empty")
+												end
+												comms_target:setDescriptionForScanState("notscanned","")
+												comms_target:setDescriptionForScanState("friendorfoeidentified",_("scienceDescription","Commercial Freighter"))
+												comms_target:setDescriptionForScanState("simplescan",_("scienceDescription","Commercial Freighter"))
+												comms_target:setDescriptionForScanState("fullscan",manifest)	
+											end
 											local purchase_results = {
 												string.format(_("trade-comms","One %s bought"),good_desc[good]),
 												string.format(_("trade-comms","You bought one %s"),good_desc[good]),
@@ -9791,6 +9972,21 @@ function neutralComms()
 											end
 											comms_source.goods[good] = comms_source.goods[good] + 1
 											comms_source.cargo = comms_source.cargo - 1
+											if update_ship_manifest then
+												local manifest = _("scienceDescription","Manifest:")
+												for good,details in pairs(comms_target.comms_data.goods) do
+													if details.quantity ~= nil and details.quantity > 0 then
+														manifest = string.format("%s %s",manifest,good_desc[good])
+													end
+												end
+												if manifest == _("scienceDescription","Manifest:") then
+													manifest = _("scienceDescription","Manifest: empty")
+												end
+												comms_target:setDescriptionForScanState("notscanned","")
+												comms_target:setDescriptionForScanState("friendorfoeidentified",_("scienceDescription","Commercial Freighter"))
+												comms_target:setDescriptionForScanState("simplescan",_("scienceDescription","Commercial Freighter"))
+												comms_target:setDescriptionForScanState("fullscan",manifest)	
+											end
 											local purchase_results = {
 												string.format(_("trade-comms","One %s bought"),good_desc[good]),
 												string.format(_("trade-comms","You bought one %s"),good_desc[good]),
@@ -9916,13 +10112,13 @@ function friendlyServiceJonqueComms(comms_data)
 			}
 			setCommsMessage(tableSelectRandom(defend_what_waypoint))
 			for n=1,comms_source:getWaypointCount() do
-				addCommsReply(string.format(_("ship-comms","Defend WP %i"),n), function()
+				addCommsReply(string.format(_("ship-comms","Defend WP %i"),comms_source:getWaypointID(n)), function()
 					comms_target:orderDefendLocation(comms_source:getWaypoint(n))
 					local defend_wp_confirmation = {
-						string.format(_("shipAssist-comms", "We are heading to assist at waypoint %d."), n),
-						string.format(_("shipAssist-comms", "Changing course to assist at waypoint %d."), n),
-						string.format(_("shipAssist-comms", "Moving to assist at waypoint %d."), n),
-						string.format(_("shipAssist-comms", "%s is changing course to assist at waypoint %d."),comms_target:getCallSign(), n),
+						string.format(_("shipAssist-comms", "We are heading to assist at waypoint %d."), comms_source:getWaypointID(n)),
+						string.format(_("shipAssist-comms", "Changing course to assist at waypoint %d."), comms_source:getWaypointID(n)),
+						string.format(_("shipAssist-comms", "Moving to assist at waypoint %d."), comms_source:getWaypointID(n)),
+						string.format(_("shipAssist-comms", "%s is changing course to assist at waypoint %d."),comms_target:getCallSign(), comms_source:getWaypointID(n)),
 					}
 					setCommsMessage(tableSelectRandom(defend_wp_confirmation));
 					addCommsReply(_("Back"), commsServiceJonque)
@@ -10039,14 +10235,14 @@ function neutralServiceJonqueComms(comms_data)
 			}
 			setCommsMessage(tableSelectRandom(defend_what_waypoint))
 			for n=1,comms_source:getWaypointCount() do
-				addCommsReply(string.format(_("ship-comms","Defend WP %i"),n), function()
+				addCommsReply(string.format(_("ship-comms","Defend WP %i"),comms_source:getWaypointID(n)), function()
 					if random(0,100) < comms_data.friendlyness then
 						comms_target:orderDefendLocation(comms_source:getWaypoint(n))
 						local defend_wp_confirmation = {
-							string.format(_("shipAssist-comms", "We are heading to assist at waypoint %d."), n),
-							string.format(_("shipAssist-comms", "Changing course to assist at waypoint %d."), n),
-							string.format(_("shipAssist-comms", "Moving to assist at waypoint %d."), n),
-							string.format(_("shipAssist-comms", "%s is changing course to assist at waypoint %d."),comms_target:getCallSign(), n),
+							string.format(_("shipAssist-comms", "We are heading to assist at waypoint %d."), comms_source:getWaypointID(n)),
+							string.format(_("shipAssist-comms", "Changing course to assist at waypoint %d."), comms_source:getWaypointID(n)),
+							string.format(_("shipAssist-comms", "Moving to assist at waypoint %d."), comms_source:getWaypointID(n)),
+							string.format(_("shipAssist-comms", "%s is changing course to assist at waypoint %d."),comms_target:getCallSign(), comms_source:getWaypointID(n)),
 						}
 						setCommsMessage(tableSelectRandom(defend_wp_confirmation));
 					else
@@ -11226,9 +11422,9 @@ function waypointDistanceUtility(p,console)
 			local wx, wy = p:getWaypoint(i)
 			local px, py = p:getPosition()
 			if prev_x == nil then
-				seq = string.format(_("msgHelms","%s\n    From current to waypoint %i: %.1f Units"),seq,i,distance(px,py,wx,wy)/1000)
+				seq = string.format(_("msgHelms","%s\n    From current to waypoint %i: %.1f Units"),seq,p:getWaypointID(n),distance(px,py,wx,wy)/1000)
 			else
-				seq = string.format(_("msgHelms","%s\n    From waypoint %i to waypoint %i: %.1f Units"),seq,i-1,i,distance(prev_x,prev_y,wx,wy)/1000)
+				seq = string.format(_("msgHelms","%s\n    From waypoint %i to waypoint %i: %.1f Units"),seq,p:getWaypointID(n)-1,p:getWaypointID(n),distance(prev_x,prev_y,wx,wy)/1000)
 			end
 			node = string.format(_("msgHelms","%s\n    To waypoint %i: %.1f Units (Bearing: %.1f)"),node,i,distance(px,py,wx,wy)/1000,angleFromVectorNorth(wx,wy,px,py))
 			prev_x = wx
