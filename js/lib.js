@@ -97,107 +97,45 @@ addToLibrary({
         };
 
         /**
-         * Create the http server and link it to the websocket server and REST api
+         * Handle a connecting websocket
          */
-        WSSLib.prototype.init_http = function () {
-            if (this.http == null && typeof window === 'undefined') {
-                this.start_http();
+        WSSLib.prototype.client_connect = function (websocket) {
+            const id = this.idcounter++;
+            //console.log(this.clients)
+            websocket.binaryType = "arraybuffer"
 
-                const http = require('http');
-                this.http = http.createServer(this.express);
-                this.websocket_listen();
+            this.clients.set(id, websocket);
+            this.inputs.set(id, []);
 
+            Module.ccall('accept_client', "number", ['number'], [id])
 
-                this.http.on("upgrade", (req, socket, head) => {
-                    const { pathname } = new URL(req.url, "http://localhost");
+            websocket.on('message', (message) => {
+                const view = new Int8Array(message);
+                //Module.ccall('receive_client_data', null, ['number', 'array', 'number'], [id, view, view.length])
 
-                    if (pathname === "/") {
-                        this.wss.handleUpgrade(req, socket, head, (ws) => {
-                            this.wss.emit("connection", ws, req);
-                        });
-                    } else {
-                        socket.destroy();
-                    }
-                });
-
-
-                this.http.listen(35666, () => {
-                    console.log("Listening on http://localhost:35666");
-                });
-            }
-        }
-
-        /**
-         * Create the websocker server
-         */
-        WSSLib.prototype.websocket_listen = function () {
-            const wss = require("ws")
-
-            this.wss = new wss.WebSocketServer({ noServer: true });
-
-            this.wss.on("connection", (websocket) => {
-                const id = this.idcounter++;
-                //console.log(this.clients)
-                websocket.binaryType = "arraybuffer"
-
-                this.clients.set(id, websocket);
-                this.inputs.set(id, []);
-
-                Module.ccall('accept_client', "number", ['number'], [id])
-
-                websocket.on('message', (message) => {
-                    const view = new Int8Array(message);
-                    //Module.ccall('receive_client_data', null, ['number', 'array', 'number'], [id, view, view.length])
-
-                    this.inputs.get(id).push(message.transfer());
-                })
-
-                websocket.on('close', (event) => {
-                    this.clients.delete(id)
-                    // Module.ccall('disconnect_client', "number", ['number'], [id])
-                })
+                this.inputs.get(id).push(message.transfer());
             })
 
+            websocket.on('close', (event) => {
+                this.clients.delete(id)
+                // Module.ccall('disconnect_client', "number", ['number'], [id])
+            })
         };
 
         WSSLib.prototype.js_websocket_listen = function () {
-            this.init_http()
+            // this.init_http()
             return true;
         }
 
         WSSLib.prototype.js_start_http = function () {
-            this.init_http()
+            // this.init_http()
             return true;
         }
 
-        /**
-         * Create the REST api server
-         */
-        WSSLib.prototype.start_http = function () {
-            const express = require("express");
-            const bodyParser = require("body-parser");
-
-            const app = express();
-            app.use(bodyParser.text({ type: "*/*" }));
-            app.use(express.static(__dirname));
-
-            app.post("/exec.lua", (req, reply) => {
-                try {
-                    const ptr = Module.ccall("execute_lua", "number", ["string"], [req.body]);
-                    const str = UTF8ToString(ptr);
-                    reply.send(str);
-                } catch (e) {
-                    reply.status(500).send(String(e?.stack || e));
-                }
-            });
-
-            this.express = app;
-        };
-
         WSSLib.prototype.js_close_http = function () {
-            if (this.http != null) {
-                this.http.close();
-            }
+            // if (this.http != null) {
+            //     this.http.close();
+            // }
             return true;
         };
 
@@ -205,9 +143,9 @@ addToLibrary({
             //if(this.wss != null){
             //    this.wss.close();
             //}
-            if (this.ws != null) {
-                this.ws.close();
-            }
+            // if (this.ws != null) {
+            //     this.ws.close();
+            // }
         };
 
         /**
@@ -219,7 +157,7 @@ addToLibrary({
             //const addr = 'localhost'//UTF8ToString(ptrAddr);
             //const url = `http://${addr}:${port}`;
 
-            this.ws = new WebSocket("/");
+            this.ws = new WebSocket(`/rooms/${port}`);
             this.ws.binaryType = "arraybuffer"
 
             this.inputs.set(0, []);
@@ -302,6 +240,8 @@ addToLibrary({
         _js_websocket_state = inst.js_websocket_state.bind(inst);
         _js_websocket_send = inst.js_websocket_send.bind(inst);
         _js_websocket_receive = inst.js_websocket_receive.bind(inst);
+
+        Module.clientConnect = inst.client_connect.bind(inst);
     },
     js_websocket_listen: function () { },
     js_websocket_listen__deps: ['$js_wss'],

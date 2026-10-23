@@ -426,11 +426,13 @@ void GuiRadarView::drawNebulaBlockedAreas(sp::RenderTarget& renderer)
 
 void GuiRadarView::drawGhostDots(sp::RenderTarget& renderer)
 {
+#ifndef __EMSCRIPTEN__
     auto& color = theme->getStyle("radar.ghost_dots")->get(getState()).color;
     for(unsigned int n=0; n<ghost_dots.size(); n++)
     {
         renderer.drawPoint(worldToScreen(ghost_dots[n].position), glm::u8vec4(color.r, color.g, color.b, color.a * std::max(((ghost_dots[n].end_of_life - engine->getElapsedTime()) / GhostDot::total_lifetime), 0.0f)));
     }
+#endif
 }
 
 void GuiRadarView::drawWaypoints(sp::RenderTarget& renderer)

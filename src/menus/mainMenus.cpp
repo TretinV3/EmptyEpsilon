@@ -47,11 +47,13 @@ MainMenu::MainMenu()
 #endif
 
     (new GuiButton(this, "START_CLIENT", tr("mainMenu", "Start client"), [this]() {
+
 #ifndef __EMSCRIPTEN__
         new ServerBrowserMenu();
 #else
         string host = "this";
-        uint64_t port = defaultServerPort;
+
+        uint64_t port = 1234;
         if (host.find(":") != -1)
         {
             port = host.substr(host.find(":") + 1).toInt64();
