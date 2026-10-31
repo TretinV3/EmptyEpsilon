@@ -913,7 +913,11 @@ if( ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
   file(COPY_FILE "${CMAKE_SOURCE_DIR}/js/package.json" "${CMAKE_BINARY_DIR}/web/package.json")
   file(COPY_FILE "${CMAKE_SOURCE_DIR}/js/package-lock.json" "${CMAKE_BINARY_DIR}/web/package-lock.json")
 
-  file(COPY_FILE "${CMAKE_SOURCE_DIR}/js/.env" "${CMAKE_BINARY_DIR}/web/.env")
+  if (EXISTS "${CMAKE_SOURCE_DIR}/js/.env")
+    file(COPY_FILE "${CMAKE_SOURCE_DIR}/js/.env" "${CMAKE_BINARY_DIR}/web/.env")
+  else ()
+    message(WARNING "js/.env was not found and thus not added to the build server")
+  endif ()
 
   file(COPY_FILE "${CMAKE_SOURCE_DIR}/www/favicon.ico" "${CMAKE_BINARY_DIR}/web/public/favicon.ico")
   add_custom_command(

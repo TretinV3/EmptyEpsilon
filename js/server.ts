@@ -91,32 +91,12 @@ class EEServer {
         // });
 
         app.use(express.json());
-        app.post("/api/token", async (req, res) => {
-            // const code = JSON.parse(req.body).code
-            console.log("Received code:", req.body.code);
-            console.log("Client ID:", process.env.VITE_DISCORD_CLIENT_ID);
-            console.log("Client Secret exists:", !!process.env.DISCORD_CLIENT_SECRET);
 
-            const params = new URLSearchParams({
-                client_id: process.env.VITE_DISCORD_CLIENT_ID,
-                client_secret: process.env.DISCORD_CLIENT_SECRET,
-                grant_type: "authorization_code",
-                code: req.body.code,
-                redirect_uri: "https://factor-ensures-lynn-surprised.trycloudflare.com",
-            } as any);
-
-            console.log("Request body:", params.toString());
-
-            const response = await fetch("https://discord.com/api/oauth2/token", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: params,
-            });
-
-            const body = await response.json();
-            console.log("Discord response:", body);
-            res.send(body);
-        });
+        if(process.env.VITE_USE_DISCORD == "true") {
+            import("./discord.js").then((discord) => {
+                discord.discord_setup_app(app);
+            })
+        }
 
         this.express = app;
     };

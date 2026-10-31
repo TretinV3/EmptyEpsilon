@@ -1,5 +1,4 @@
 
-import { DiscordSDK, RPCCloseCodes } from "@discord/embedded-app-sdk";
 
 
 console.log("Hello from vite !")
@@ -71,7 +70,6 @@ var Module = {
     },
     onExit: function() {
         console.log('Exiting...');
-        discordSdk.close(RPCCloseCodes.CLOSE_NORMAL, "You exited from app");
     }
 };
 setStatus('Downloading...');
@@ -84,73 +82,80 @@ window.onerror = window.onunhandledrejection = () => {
     };
 };
 
+let getUser = async () => '';
 
+if(import.meta.env.VITE_USE_DISCORD === 'true') {
+    const { DiscordSDK, RPCCloseCodes } = await import("@discord/embedded-app-sdk")
 
-// Instantiate the SDK
-const discordSdk = new DiscordSDK(import.meta.env.VITE_DISCORD_CLIENT_ID);
+    // Instantiate the SDK
+    const discordSdk = new DiscordSDK(import.meta.env.VITE_DISCORD_CLIENT_ID);
 
-setupDiscordSdk().then(() => {
-    console.log("Discord SDK is ready");
-});
-
-let auth = null;
-
-async function setupDiscordSdk() {
-    await discordSdk.ready();
-
-    const { code } = await discordSdk.commands.authorize({
-        client_id: import.meta.env.VITE_DISCORD_CLIENT_ID,
-        response_type: "code",
-        state: "",
-        prompt: "none",
-        scope: [
-            "identify",
-            "guilds",
-            "applications.commands"
-        ],
-    });
-
-    // Retrieve an access_token from your activity's server
-    const response = await fetch("/api/token", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            code,
-        }),
-    });
-    const { access_token } = await response.json();
-
-    // Authenticate with Discord client (using the access_token)
-    auth = await discordSdk.commands.authenticate({
-        access_token,
-    });
-
-
-    if (auth == null) {
-        throw new Error("Authenticate command failed");
+    Module.onExit = () => {
+        console.log('Exiting...');
+        discordSdk.close(RPCCloseCodes.CLOSE_NORMAL, "You exited from app");
     }
 
+    setupDiscordSdk().then(() => {
+        console.log("Discord SDK is ready");
+    });
+
+    let auth = null;
+
+
+    async function setupDiscordSdk() {
+        await discordSdk.ready();
+
+        const { code } = await discordSdk.commands.authorize({
+            client_id: import.meta.env.VITE_DISCORD_CLIENT_ID,
+            response_type: "code",
+            state: "",
+            prompt: "none",
+            scope: [
+                "identify",
+                "guilds",
+                "applications.commands"
+            ],
+        });
+
+        // Retrieve an access_token from your activity's server
+        const response = await fetch("/api/token", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                code,
+            }),
+        });
+        const { access_token } = await response.json();
+
+        // Authenticate with Discord client (using the access_token)
+        auth = await discordSdk.commands.authenticate({
+            access_token,
+        });
+
+
+        if (auth == null) {
+            throw new Error("Authenticate command failed");
+        }
+    }
+
+    getUser = async () =>{
+        const user = await fetch(`https://discord.com/api/v10/users/@me`, {
+            headers: {
+                // NOTE: we're using the access_token provided by the "authenticate" command
+                Authorization: `Bearer ${auth.access_token}`,
+                'Content-Type': 'application/json',
+            },
+        }).then((response) => response.json());
+
+        return user.global_name;
+    }
 }
 
-async function getUser() {
-    const user = await fetch(`https://discord.com/api/v10/users/@me`, {
-        headers: {
-            // NOTE: we're using the access_token provided by the "authenticate" command
-            Authorization: `Bearer ${auth.access_token}`,
-            'Content-Type': 'application/json',
-        },
-    }).then((response) => response.json());
-
-    return user;
-}
 
 import initModule from "./EmptyEpsilon.js";
 initModule(Module).then(async (instance) => {
     const user = await getUser();
-    console.log(user);
-    // setTimeout(() => {
-        instance.setUsername(user.global_name);
-    // }, 2000)
+    instance.setUsername(user);
 });
