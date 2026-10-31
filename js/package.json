@@ -1,7 +1,31 @@
 {
   "dependencies": {
+    "@discord/embedded-app-sdk": "^2.5.0",
     "body-parser": "^2.3.0",
+    "dotenv": "^18.0.9",
     "express": "^5.2.1",
+    "node-fetch": "^3.3.2",
     "ws": "^8.21.0"
+  },
+  "name": "empty-epsilon",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "build": "tsc --outDir $OUT_DIR && vite build --outDir $PUBLIC_OUT_DIR"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@types/body-parser": "^1.19.6",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.5",
+    "@types/ws": "^8.18.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5"
   }
 }

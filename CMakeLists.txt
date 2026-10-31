@@ -907,46 +907,64 @@ endif()
 if( ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
 
   file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/web")
-  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/web/assets")
-  file(COPY_FILE "${CMAKE_SOURCE_DIR}/js/server.js" "${CMAKE_BINARY_DIR}/web/server.js")
+  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/web/public")
+  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/web/public/assets")
+
   file(COPY_FILE "${CMAKE_SOURCE_DIR}/js/package.json" "${CMAKE_BINARY_DIR}/web/package.json")
   file(COPY_FILE "${CMAKE_SOURCE_DIR}/js/package-lock.json" "${CMAKE_BINARY_DIR}/web/package-lock.json")
 
-  file(COPY_FILE "${CMAKE_SOURCE_DIR}/www/favicon.ico" "${CMAKE_BINARY_DIR}/web/favicon.ico")
+  file(COPY_FILE "${CMAKE_SOURCE_DIR}/js/.env" "${CMAKE_BINARY_DIR}/web/.env")
+
+  file(COPY_FILE "${CMAKE_SOURCE_DIR}/www/favicon.ico" "${CMAKE_BINARY_DIR}/web/public/favicon.ico")
   add_custom_command(
           TARGET ${PROJECT_NAME}
-          COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/www/fonts ${CMAKE_BINARY_DIR}/web/fonts
+          COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/www/fonts ${CMAKE_BINARY_DIR}/web/public/fonts
+  )
+
+  # Install js build dependencies
+  add_custom_command(
+          TARGET ${PROJECT_NAME}
+          COMMAND npm clean-install
+          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/js
+  )
+  add_custom_command(
+          TARGET ${PROJECT_NAME} POST_BUILD
+          COMMAND OUT_DIR=${CMAKE_BINARY_DIR}/web PUBLIC_OUT_DIR=${CMAKE_BINARY_DIR}/web/public npm run build
+          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/js
+          DEPENDS ${CMAKE_SOURCE_DIR}/js/server.ts ${CMAKE_SOURCE_DIR}/js/client.ts
   )
 
   add_custom_command(
           TARGET ${PROJECT_NAME} PRE_BUILD
-          COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/resources/ ${CMAKE_BINARY_DIR}/web/assets/resources
-          COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/scripts/ ${CMAKE_BINARY_DIR}/web/assets/scripts
+          COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/resources/ ${CMAKE_BINARY_DIR}/web/public/assets/resources
+          COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/scripts/ ${CMAKE_BINARY_DIR}/web/public/assets/scripts
   )
 
 
   add_custom_command(
           TARGET ${PROJECT_NAME} POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.html" "${CMAKE_BINARY_DIR}/web/index.html"
-          COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.js" "${CMAKE_BINARY_DIR}/web/${PROJECT_NAME}.js"
-          COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.wasm" "${CMAKE_BINARY_DIR}/web/${PROJECT_NAME}.wasm"
-          COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.data" "${CMAKE_BINARY_DIR}/web/${PROJECT_NAME}.data"
+          COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.html" "${CMAKE_BINARY_DIR}/web/public/index.html"
+          COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.js" "${CMAKE_BINARY_DIR}/web/public/${PROJECT_NAME}.js"
+          COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.wasm" "${CMAKE_BINARY_DIR}/web/public/${PROJECT_NAME}.wasm"
+          COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.data" "${CMAKE_BINARY_DIR}/web/public/${PROJECT_NAME}.data"
   )
 
   # FIXME hacky
   # Enable webgl capabilities
   add_custom_command(
           TARGET ${PROJECT_NAME} POST_BUILD
-          COMMAND sed -i "s/alpha:false/alpha:true/" "${CMAKE_BINARY_DIR}/web/${PROJECT_NAME}.js"
-          COMMAND sed -i "s/depth:false/depth:true/" "${CMAKE_BINARY_DIR}/web/${PROJECT_NAME}.js"
-          COMMAND sed -i "s/stencil:false/stencil:true/" "${CMAKE_BINARY_DIR}/web/${PROJECT_NAME}.js"
-          COMMAND sed -i "s/antialias:false/antialias:true/" "${CMAKE_BINARY_DIR}/web/${PROJECT_NAME}.js"
+          COMMAND sed -i "s/alpha:false/alpha:true/" "${CMAKE_BINARY_DIR}/web/public/${PROJECT_NAME}.js"
+          COMMAND sed -i "s/depth:false/depth:true/" "${CMAKE_BINARY_DIR}/web/public/${PROJECT_NAME}.js"
+          COMMAND sed -i "s/stencil:false/stencil:true/" "${CMAKE_BINARY_DIR}/web/public/${PROJECT_NAME}.js"
+          COMMAND sed -i "s/antialias:false/antialias:true/" "${CMAKE_BINARY_DIR}/web/public/${PROJECT_NAME}.js"
   )
 
-target_link_options(${PROJECT_NAME} PRIVATE
+  target_link_options(${PROJECT_NAME} PRIVATE
           -sUSE_SDL=2
           -sALLOW_MEMORY_GROWTH=1
           -sMODULARIZE
+          -sEXPORT_ES6
+          -sEXPORT_NAME=Module
           -sEXPORTED_RUNTIME_METHODS=ccall
           -sMAX_WEBGL_VERSION=2
           -sMIN_WEBGL_VERSION=2
@@ -957,6 +975,6 @@ target_link_options(${PROJECT_NAME} PRIVATE
           --js-library
           "${CMAKE_SOURCE_DIR}/js/lib.js"
           --preload-file
-          "${CMAKE_BINARY_DIR}/web/assets@/"
+          "${CMAKE_BINARY_DIR}/web/public/assets@/"
   )
 endif()

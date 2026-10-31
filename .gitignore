@@ -49,3 +49,4 @@ _build*/
 cmake/_win32/
 cmake/android/
 script_docs/__pycache__/
+node_modules

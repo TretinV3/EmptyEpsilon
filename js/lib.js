@@ -124,11 +124,13 @@ addToLibrary({
 
         WSSLib.prototype.js_websocket_listen = function () {
             // this.init_http()
+            this.wss = true;
             return true;
         }
 
         WSSLib.prototype.js_start_http = function () {
             // this.init_http()
+            this.http = true;
             return true;
         }
 
@@ -208,7 +210,7 @@ addToLibrary({
          * @param {number} id Client target id
          * @param {number} ptr Pointer to the start of the data
          * @param {number} size Lenght of desired bytes of data
-         * @returns 
+         * @returns
          */
         WSSLib.prototype.js_websocket_receive = function (id, ptr, size) {
             let data;
@@ -229,12 +231,21 @@ addToLibrary({
             return view.length;
         }
 
+        /**
+         * Update the username
+         * @param {string} name Username
+         * @returns
+         */
+        WSSLib.prototype.set_username = function (name) {
+            Module.ccall('set_username', 'void', ['string'], [name]);
+        }
+
         var inst = new WSSLib();
         _js_websocket_listen = inst.js_websocket_listen.bind(inst);
         _js_websocket_close = inst.js_websocket_close.bind(inst);
 
         _js_start_http = inst.js_start_http.bind(inst);
-        _js_close_http = inst.js_close_http.bind(inst);
+        // _js_close_http = inst.js_close_http.bind(inst);
 
         _js_websocket_connect = inst.js_websocket_connect.bind(inst);
         _js_websocket_state = inst.js_websocket_state.bind(inst);
@@ -242,6 +253,8 @@ addToLibrary({
         _js_websocket_receive = inst.js_websocket_receive.bind(inst);
 
         Module.clientConnect = inst.client_connect.bind(inst);
+        Module.setUsername = inst.set_username.bind(inst);
+
     },
     js_websocket_listen: function () { },
     js_websocket_listen__deps: ['$js_wss'],
@@ -261,6 +274,11 @@ addToLibrary({
     js_websocket_send__deps: ['$js_wss'],
     js_websocket_receive: function () { },
     js_websocket_receive__deps: ['$js_wss'],
+
+    js_on_shutdown: function () {
+        Module['onExit']?.(-314);
+    },
+    js_on_shutdown__deps: ['$js_wss'],
 
     js_get_screen_size: function (ptrW, ptrH) {
         var win = window,

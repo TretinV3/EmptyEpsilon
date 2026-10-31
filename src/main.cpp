@@ -430,6 +430,13 @@ void accept_client(int id) {
 }
 
 EMSCRIPTEN_KEEPALIVE
+void set_username(char* name) {
+    std::string str = name;
+    LOG(INFO, "set_username ", str);
+    PreferencesManager::set("username", str);
+}
+
+EMSCRIPTEN_KEEPALIVE
 const char* execute_lua(char* data) {
     LOG(INFO, "execute ", data);
 
