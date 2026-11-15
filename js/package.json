@@ -14,7 +14,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
-    "build": "tsc --outDir $OUT_DIR && vite build --outDir $PUBLIC_OUT_DIR"
+    "build": "tsc --outDir $OUT_DIR && vite build --outDir $PUBLIC_OUT_DIR",
+    "build-ts": "tsc --outDir $OUT_DIR"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +23,7 @@
   "type": "module",
   "devDependencies": {
     "@types/body-parser": "^1.19.6",
+    "@types/emscripten": "^1.41.6",
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.5",
     "@types/ws": "^8.18.2",

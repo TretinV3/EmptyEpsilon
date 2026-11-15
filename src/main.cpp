@@ -90,15 +90,6 @@ int runProxyServer()
     return 0;
 }
 
-#ifdef __EMSCRIPTEN__
-
-extern "C" {
-extern bool js_start_http();
-extern bool js_close_http();
-}
-
-#endif
-
 int main(int argc, char** argv)
 {
 #ifdef DEBUG
@@ -170,7 +161,7 @@ int main(int argc, char** argv)
 #ifndef __EMSCRIPTEN__
         new EEHttpServer(port_nr, PreferencesManager::get("www_directory", "www"));
 #else
-        js_start_http();
+        LOG(WARNING) << "Emscripten is enable, EE own HTTP server is disabled.";
 #endif
     }
 
