@@ -76,13 +76,14 @@ class BaseLib {
 
     // Client
     js_websocket_connect(ptrAddr: number, port: number){throw "BaseLib is selected, this function is not supported"}
+    js_can_client_start_server() { return false }
     websocket_client_state(){throw "BaseLib is selected, this function is not supported"}
     websocket_client_send(ptrData: number, size: number){throw "BaseLib is selected, this function is not supported"}
     websocket_client_receive(ptr: number, size: number){throw "BaseLib is selected, this function is not supported"}
     websocket_client_close(){throw "BaseLib is selected, this function is not supported"}
 
     // Server
-    js_websocket_listen(){throw "BaseLib is selected, this function is not supported"}
+    js_websocket_listen(port: number){throw "BaseLib is selected, this function is not supported"}
     client_connect(ws: WebSocketS){throw "BaseLib is selected, this function is not supported"}
     websocket_server_state(id: number){throw "BaseLib is selected, this function is not supported"}
     websocket_server_send(id: number, ptrData: number, size: number){throw "BaseLib is selected, this function is not supported"}
@@ -260,135 +261,123 @@ class ServerWSLib extends ClientWSLib {
         this.clients.get(id)?.close();
     }
 
-    js_websocket_listen(){
+    js_websocket_listen(port: number){
         this.server_mode = true;
         return true;
     }
 }
 
-//
-// class OldLib {
-//
-//     wss: boolean = false;
-//     ws: WebSocket | null = null;
-//     http: boolean = false;
-//
-//     idcounter: number = 0;
-//
-//     clients: Map<number, WebSocketS> = new Map();
-//     inputs: Map<number, ArrayBuffer[]> = new Map();
-//
-//     /**
-//      * Handle a connecting websocket
-//      */
-//     client_connect(websocket: WebSocketS) {
-//         const id = this.idcounter++;
-//         //console.log(this.clients)
-//         websocket.binaryType = "arraybuffer"
-//
-//         this.clients.set(id, websocket);
-//         this.inputs.set(id, []);
-//
-//         ccall('accept_client', "number", ['number'], [id])
-//
-//         websocket.on('message', (message: any) => {
-//             const view = new Int8Array(message);
-//             //Module.ccall('receive_client_data', null, ['number', 'array', 'number'], [id, view, view.length])
-//
-//             this.inputs.get(id)!.push(message.transfer());
-//         })
-//
-//         websocket.on('close', () => {
-//             this.clients.delete(id)
-//             // Module.ccall('disconnect_client', "number", ['number'], [id])
-//         })
-//     };
-//
-//     js_websocket_listen() {
-//         this.wss = true;
-//         return true;
-//     }
-//
-//     js_start_http() {
-//         this.http = true;
-//         return true;
-//     }
-//
-//     js_close_http() {
-//         return true;
-//     };
-//
-//     js_websocket_close() {
-//         return true;
-//     };
-//
-//     /**
-//      * Connect to the local websocket server
-//      */
-//     js_websocket_connect(ptrAddr: number, port: number) {
-//         //const addr = 'localhost'//UTF8ToString(ptrAddr);
-//         //const url = `http://${addr}:${port}`;
-//
-//         this.ws = new WebSocket(`/rooms/${port}`);
-//         this.ws.binaryType = "arraybuffer"
-//
-//         this.inputs.set(0, []);
-//
-//         this.ws.addEventListener('message', (event) => {
-//             const view = new Int8Array(event.data);
-//             this.inputs.get(0)!.push(event.data.transfer());
-//         })
-//     };
-//
-//     js_websocket_state(id: number | null = null) {
-//         if (this.ws != null) {
-//             return this.ws.readyState;
-//         }
-//         if (this.wss != null && id != null) {
-//             const ws = this.clients.get(id);
-//             if (!ws) return 3;
-//             return ws.readyState
-//         }
-//         return 3;
-//     };
-//
-//     /**
-//      * Send data over websocket
-//      */
-//     js_websocket_send(id: number, ptrData: number, size: number) {
-//         const data = cArrayToArrayBuffer(ptrData, size);
-//
-//         if (this.wss != null) {
-//             this.clients.get(id)?.send(data);
-//         }
-//         if (this.ws) {
-//             this.ws?.send(data);
-//         }
-//     };
-//
-//     /**
-//      * Give back desired received data
-//      */
-//     js_websocket_receive(id: number, ptr: number, size: number) {
-//         let data;
-//         if (this.wss != null) {
-//             data = extractSizeBytes(this.inputs.get(id)!, size);
-//
-//         } else if (this.ws) {
-//             data = extractSizeBytes(this.inputs.get(0)!, size);
-//         } else {
-//             return 0;
-//         }
-//
-//         const view = new Int8Array(data);
-//         for (let i = 0; i < view.length; i++) {
-//             setValue(ptr + i, view[i]!, "i8");
-//         }
-//
-//         return view.length;
-//     }
-//
-//     set_username(name: string) {
-//         ccall('set_username', null, ['string'], [name]);
-//     }
-// }
+class ServerWSProxyLib extends ClientWSLib {
+
+    server!: WebSocket;
+    client_status: Map<number, number> = new Map();
+
+    // clients: Map<number, WebSocket> = new Map();
+    server_inputs: Map<number, ArrayBuffer[]> = new Map();
+
+    constructor() {
+        super();
+    }
+
+    js_can_client_start_server() { return true }
+
+    /**
+     * Handle a connecting websocket
+     */
+    client_connect_add(id: number) {
+
+        this.server_inputs.set(id, []);
+        this.client_status.set(id, WebSocket.OPEN);
+
+        ccall('accept_client', "number", ['number'], [id])
+
+    };
+
+    websocket_server_state(id: number) {
+        return this.client_status.get(id) ?? WebSocket.CLOSED;
+    };
+
+    /**
+     * Send data over websocket
+     */
+    websocket_server_send(id: number, ptrData: number, size: number) {
+        const data = cArrayToArrayBuffer(ptrData, size);
+
+        const buffer = new ArrayBuffer(9);
+        const view = new DataView(buffer);
+        view.setUint8(0, ProxyCommands.SEND)
+        view.setBigUint64(1, BigInt(id));
+
+        this.server.send(new Blob([view.buffer, data]));
+
+    };
+
+    /**
+     * Give back desired received data
+     */
+    websocket_server_receive(id: number, ptr: number, size: number) {
+        let data = extractSizeBytes(this.server_inputs.get(id)!, size);
+
+        const view = new Int8Array(data);
+        for (let i = 0; i < view.length; i++) {
+            setValue(ptr + i, view[i]!, "i8");
+        }
+
+        return view.length;
+    }
+
+    websocket_server_close(id: number) {
+        const buffer = new ArrayBuffer(9);
+        const view = new DataView(buffer);
+        view.setUint8(0, ProxyCommands.CLOSE)
+        view.setBigUint64(1, BigInt(id));
+        this.server.send(view.buffer);
+    }
+
+    js_websocket_listen(port: number){
+        this.server_mode = true;
+        this.server = new WebSocket(`/proxy/${port}`);
+        this.server.binaryType = "arraybuffer"
+
+        console.log("Started js connection")
+
+        this.server.addEventListener('message', (event) => {
+            // Message :
+            // uint_8 command
+            // uint_64 destination id
+            const view = new Uint8Array(event.data);
+
+            const v = new DataView(view.buffer);
+
+            // WARNING dangerous convertion
+            const id = Number(v.getBigUint64(1));
+            const command = v.getUint8(0);
+            switch (command) {
+                case ProxyCommands.CONNECTION:
+                    this.client_connect_add(id);
+                    break;
+                case ProxyCommands.STATUS:
+                    const status = v.getUint8(8);
+                    this.client_status.set(id, status);
+                    break;
+                case ProxyCommands.CLOSE:
+                    this.client_status.set(id, WebSocket.CLOSED);
+                    break;
+                case ProxyCommands.SEND:
+                    const message = view.slice(9).buffer
+                    this.server_inputs.get(id)!.push(message);
+                    break;
+                default:
+                    console.log("Unknow command from proxy server " + command);
+            }
+        })
+        return true;
+    }
+}
+
+enum ProxyCommands {
+    CONNECTION = 0,
+    STATUS = 1,
+    CLOSE = 2,
+    SEND = 3
+}

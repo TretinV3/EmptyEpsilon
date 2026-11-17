@@ -21,6 +21,15 @@
 #include "gui/gui2_button.h"
 #include "gui/gui2_textentry.h"
 
+
+
+#ifdef __EMSCRIPTEN__
+extern "C" {
+extern bool js_can_client_start_server();
+}
+#endif
+
+
 MainMenu::MainMenu()
 {
     constexpr float logo_size = 256;
@@ -39,12 +48,16 @@ MainMenu::MainMenu()
     (new GuiTextEntry(this, "USERNAME", PreferencesManager::get("username")))->callback([](string text) {
         PreferencesManager::set("username", text);
     })->setPosition({50, -350}, sp::Alignment::BottomLeft)->setSize(300, 50);
+#endif
 
     (new GuiButton(this, "START_SERVER", tr("mainMenu", "Start server"), [this]() {
         new ServerSetupScreen();
         destroy();
-    }))->setPosition({50, -230}, sp::Alignment::BottomLeft)->setSize(300, 50);
+    }))->setPosition({50, -230}, sp::Alignment::BottomLeft)->setSize(300, 50)
+#ifdef __EMSCRIPTEN__
+    ->setEnable(js_can_client_start_server())
 #endif
+    ;
 
     (new GuiButton(this, "START_CLIENT", tr("mainMenu", "Start client"), [this]() {
 

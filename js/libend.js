@@ -1,7 +1,7 @@
 
 
         // TODO change
-        const inst = new ServerWSLib();
+        const inst = new ServerWSProxyLib();
 
         Module.clientConnect = inst.client_connect.bind(inst);
         Module.setUsername = inst.set_username.bind(inst);
@@ -12,10 +12,13 @@
         _js_websocket_receive = inst.js_websocket_receive.bind(inst);
         _js_websocket_listen = inst.js_websocket_listen.bind(inst);
         _js_websocket_close = inst.js_websocket_close.bind(inst);
+        _js_can_client_start_server = inst.js_can_client_start_server.bind(inst);
     },
     //
     js_websocket_connect: function () { },
     js_websocket_connect__deps: ['$js_lib'],
+    js_can_client_start_server: function(){ },
+    js_can_client_start_server__deps: ['$js_lib'],
     js_websocket_state: function () { },
     js_websocket_state__deps: ['$js_lib'],
     js_websocket_send: function () { },
