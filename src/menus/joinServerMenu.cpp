@@ -22,7 +22,11 @@ JoinServerScreen::JoinServerScreen(const ServerScanner::ServerInfo& target)
     (new GuiButton(this, "BTN_CANCEL", tr("button", "Cancel"), [this]() {
         destroy();
         disconnectFromServer();
-        new ServerBrowserMenu();
+#ifndef __EMSCRIPTEN__
+        new MainMenu();
+#else
+        returnToMainMenu(getRenderLayer());
+#endif
     }))->setPosition(50, -50, sp::Alignment::BottomLeft)->setSize(300, 50);
 
     password_entry_box = new GuiPanel(this, "PASSWORD_ENTRY_BOX");

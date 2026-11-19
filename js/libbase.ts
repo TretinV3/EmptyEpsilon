@@ -1,6 +1,8 @@
 /// <reference types="@types/emscripten">
 
 import type {WebSocket as WebSocketS} from "ws";
+import Peer from "peerjs";
+import type {DataConnection} from "peerjs";
 
 /**
  * Print a buffer to hex - debug usage
@@ -62,6 +64,9 @@ function extractSizeBytes(chunks: ArrayBuffer[], size: number): ArrayBuffer {
     return out.buffer;
 }
 
+/**
+ * Base "empty" library, its more of an interface than a class
+ */
 class BaseLib {
 
     server_mode: boolean = false;
@@ -122,6 +127,9 @@ class BaseLib {
 
 }
 
+/**
+ * Client-Side Websocket to server library
+ */
 class ClientWSLib extends BaseLib {
 
     ws: WebSocket | null = null;
@@ -190,6 +198,9 @@ class ClientWSLib extends BaseLib {
     }
 }
 
+/**
+ * Server-side WebSocket library used with dedicated server instance
+ */
 class ServerWSLib extends ClientWSLib {
 
     idcounter: number = 0;
@@ -267,6 +278,9 @@ class ServerWSLib extends ClientWSLib {
     }
 }
 
+/**
+ * Client-side server library when a WebSocket Proxy is used
+ */
 class ServerWSProxyLib extends ClientWSLib {
 
     server!: WebSocket;
@@ -372,6 +386,185 @@ class ServerWSProxyLib extends ClientWSLib {
             }
         })
         return true;
+    }
+}
+
+/**
+ * Client and server library for Peer To Peer connection using peer.js
+ */
+class ServerPeerProxyLib extends BaseLib {
+
+    // Server part :
+    server!: Peer;
+
+    clients: Map<number, DataConnection> = new Map();
+    server_inputs: Map<number, ArrayBuffer[]> = new Map();
+
+    idcounter: number = 0;
+
+    constructor() {
+        super();
+    }
+
+    js_can_client_start_server() { return true }
+
+
+    websocket_server_state(id: number) {
+        return this.clients.get(id)?.open ? WebSocket.OPEN : WebSocket.CLOSED;
+    };
+
+    /**
+     * Send data over websocket
+     */
+    websocket_server_send(id: number, ptrData: number, size: number) {
+        const data = cArrayToArrayBuffer(ptrData, size);
+
+        this.clients.get(id)!.send(data);
+
+    };
+
+    /**
+     * Give back desired received data
+     */
+    websocket_server_receive(id: number, ptr: number, size: number) {
+        let data = extractSizeBytes(this.server_inputs.get(id)!, size);
+
+        const view = new Int8Array(data);
+        for (let i = 0; i < view.length; i++) {
+            setValue(ptr + i, view[i]!, "i8");
+        }
+
+        return view.length;
+    }
+
+    websocket_server_close(id: number) {
+        this.clients.get(id)?.close();
+        this.clients.delete(id);
+    }
+
+    client_connect_peer(conn: DataConnection) {
+
+        conn.on("open", () => {
+
+            console.log("connection server open")
+
+
+            const id = this.idcounter++;
+
+            this.clients.set(id, conn);
+            this.server_inputs.set(id, []);
+
+            ccall('accept_client', "number", ['number'], [id])
+
+            conn.on('data', (message: any) => {
+                // console.log("connection server data", message)
+                const view = new Int8Array(message);
+                this.server_inputs.get(id)!.push(message.transfer());
+            })
+
+            conn.on('close', () => {
+                this.clients.delete(id)
+            })
+        })
+    };
+
+    js_websocket_listen(port: number){
+        this.server_mode = true;
+        this.server = new Peer();
+
+        this.server.on("open", (id) => {
+            console.log("Started js connection", id);
+
+            const infobox = document.getElementById('infobox');
+            if(infobox){
+                infobox.innerHTML = `id: <button style="font-family: monospace; user-select: all; background: black; border-radius: 3px; padding: 1px; color: white; border: none;" onclick="navigator.clipboard.writeText('${id}'); alert('id copied')">${id}</button>`;
+            }
+
+            this.server.on("connection", conn => {
+                console.log("connection server start")
+                this.client_connect_peer(conn);
+            })
+        })
+
+        return true;
+    }
+
+    // Client part :
+    peer: Peer | null = null;
+    connection: DataConnection | null = null;
+    client_input: ArrayBuffer[] = [];
+
+    is_waiting: boolean = false;
+
+    /**
+     * Connect to the local websocket server
+     */
+    js_websocket_connect(ptrAddr: number, port: number) {
+        //const addr = 'localhost'//UTF8ToString(ptrAddr);
+        //const url = `http://${addr}:${port}`;
+
+        this.peer = new Peer()
+        this.client_input = [];
+
+        this.is_waiting = true;
+
+        this.peer.on("open", () => {
+            const dest = prompt("Connection Id");
+            if(!dest) return;
+            this.connection = this.peer!.connect(dest)
+
+            console.log("connection start")
+            this.connection.on("open", () => {
+                console.log("connection open")
+                this.is_waiting = false;
+                this.connection!.on('data', (data: any) => {
+                    // console.log("connection data", data)
+                    this.client_input.push(data.transfer());
+                })
+            })
+        })
+    };
+
+
+    websocket_client_state() {
+        if(this.is_waiting) {
+            return WebSocket.CONNECTING;
+        } else
+        if (this.connection != null) {
+            return this.connection.open ? WebSocket.OPEN : WebSocket.CLOSED;
+        }
+        return WebSocket.CLOSED;
+    };
+
+    /**
+     * Send data over websocket
+     */
+    websocket_client_send(ptrData: number, size: number) {
+        const data = cArrayToArrayBuffer(ptrData, size);
+        this.connection!.send(data);
+    };
+
+    /**
+     * Give back desired received data
+     */
+    websocket_client_receive(ptr: number, size: number) {
+        let data;
+        if (this.connection) {
+            data = extractSizeBytes(this.client_input, size);
+        } else {
+            return 0;
+        }
+
+        const view = new Int8Array(data);
+        for (let i = 0; i < view.length; i++) {
+            setValue(ptr + i, view[i]!, "i8");
+        }
+
+        return view.length;
+    }
+
+    websocket_client_close() {
+        this.connection?.close();
     }
 }
 

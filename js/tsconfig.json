@@ -1,5 +1,5 @@
 {
-  "include": ["server.ts", "libbase.ts"],
+  "include": ["server.ts"],
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
     // File Layout

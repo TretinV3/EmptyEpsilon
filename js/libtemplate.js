@@ -1,7 +1,28 @@
+addToLibrary({
+    $js_lib__postset: 'js_lib();',
+    $js_lib: function(){
 
+        // Next line is a compile macro, do not change !
+        //#LIB_INSERT_HERE#//
 
-        // TODO change
-        const inst = new ServerWSProxyLib();
+        let libraryType;
+        if(ENV_VITE_SERVER_TYPE === "server"){
+            // Use ServerWS, the same library include both client and server codes as the build output will be used for
+            // both.
+            libraryType = ServerWSLib;
+        } else if(ENV_VITE_SERVER_TYPE === "client"){
+            if(ENV_VITE_CONNECTION === "proxy"){
+                libraryType = ServerWSProxyLib;
+            } else if(ENV_VITE_CONNECTION === "RTC") {
+                libraryType = ServerPeerProxyLib;
+            } else {
+                console.log("Unknow VITE_CONNECTION : use 'proxy' of 'RTC'")
+            }
+        } else {
+            console.log("Unknow VITE_SERVER_TYPE : use 'server' of 'client'")
+        }
+
+        const inst = new libraryType();
 
         Module.clientConnect = inst.client_connect.bind(inst);
         Module.setUsername = inst.set_username.bind(inst);

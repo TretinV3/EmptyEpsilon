@@ -3,7 +3,7 @@
 
 console.log("Hello from vite !")
 
-
+// Default Emscripten code
 var statusElement = document.getElementById('status');
 var progressElement = document.getElementById('progress');
 var spinnerElement = document.getElementById('spinner');
@@ -81,6 +81,7 @@ window.onerror = window.onunhandledrejection = () => {
         if (text) console.error('[post-exception status] ' + text);
     };
 };
+// End of default Emscripten code
 
 let getUser = async () => '';
 

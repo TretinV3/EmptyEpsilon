@@ -224,10 +224,10 @@ if(process.env.VITE_SERVER_TYPE == "server"){
 } else if(process.env.VITE_SERVER_TYPE == "client"){
     if(process.env.VITE_CONNECTION == "proxy"){
         const server = new EEWSProxy();
-    } else if(process.env.VITE_CONNECTION == "P2P") {
-
+    } else if(process.env.VITE_CONNECTION == "RTC") {
+        const server = new EEBase<never>();
     } else {
-        console.log("Unknow VITE_CONNECTION : use 'proxy' of 'P2P'")
+        console.log("Unknow VITE_CONNECTION : use 'proxy' of 'RTC'")
     }
 } else {
     console.log("Unknow VITE_SERVER_TYPE : use 'server' of 'client'")

@@ -932,15 +932,12 @@ if( ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/js
   )
 
-  add_custom_target(
-          jslibs ALL
+  add_custom_target("jslibs")
+  add_custom_command(
+          TARGET "jslibs"
           COMMAND OUT_DIR=${CMAKE_BINARY_DIR}/web PUBLIC_OUT_DIR=${CMAKE_BINARY_DIR}/web/public npm run build
-          COMMAND cat libstart.js > ${CMAKE_BINARY_DIR}/web/lib.js
-          COMMAND cat ${CMAKE_BINARY_DIR}/web/libbase.js >> ${CMAKE_BINARY_DIR}/web/lib.js
-          COMMAND cat libend.js >> ${CMAKE_BINARY_DIR}/web/lib.js
-          COMMAND sed -i "s/export \{\}\;//" ${CMAKE_BINARY_DIR}/web/lib.js
           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/js
-          DEPENDS ${CMAKE_SOURCE_DIR}/js/server.ts ${CMAKE_SOURCE_DIR}/js/client.ts ${CMAKE_SOURCE_DIR}/js/libstart.js ${CMAKE_SOURCE_DIR}/js/libend.js ${CMAKE_SOURCE_DIR}/js/libbase.ts
+          DEPENDS ${CMAKE_SOURCE_DIR}/js/server.ts ${CMAKE_SOURCE_DIR}/js/client.ts ${CMAKE_SOURCE_DIR}/js/index.html ${CMAKE_SOURCE_DIR}/js/libtemplate.js ${CMAKE_SOURCE_DIR}/js/libbase.ts
   )
 
   add_custom_command(
@@ -952,7 +949,7 @@ if( ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
 
   add_custom_command(
           TARGET ${PROJECT_NAME} POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.html" "${CMAKE_BINARY_DIR}/web/public/index.html"
+#          COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.html" "${CMAKE_BINARY_DIR}/web/public/index.html"
           COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.js" "${CMAKE_BINARY_DIR}/web/public/${PROJECT_NAME}.js"
           COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.wasm" "${CMAKE_BINARY_DIR}/web/public/${PROJECT_NAME}.wasm"
           COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.data" "${CMAKE_BINARY_DIR}/web/public/${PROJECT_NAME}.data"
@@ -968,7 +965,8 @@ if( ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
           COMMAND sed -i "s/antialias:false/antialias:true/" "${CMAKE_BINARY_DIR}/web/public/${PROJECT_NAME}.js"
   )
 
-#  set_target_properties(${PROJECT_NAME} PROPERTIES LINK_DEPENDS jslibs)
+  add_dependencies(${PROJECT_NAME} "jslibs")
+  set_target_properties(${PROJECT_NAME} PROPERTIES LINK_DEPENDS ${CMAKE_BINARY_DIR}/web/lib.js)
 
   target_link_options(${PROJECT_NAME} PRIVATE
           -sUSE_SDL=2
@@ -979,16 +977,14 @@ if( ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
           -sEXPORTED_RUNTIME_METHODS=ccall
           -sMAX_WEBGL_VERSION=2
           -sMIN_WEBGL_VERSION=2
-          -sVERBOSE
+#          -sVERBOSE
           -sFORCE_FILESYSTEM
           --extern-post-js "${CMAKE_SOURCE_DIR}/js/screen.js"
-          --shell-file
-          "${CMAKE_SOURCE_DIR}/shell.html"
+#          --shell-file
+#          "${CMAKE_SOURCE_DIR}/shell.html"
           --js-library
           "${CMAKE_BINARY_DIR}/web/lib.js"
           --preload-file
           "${CMAKE_BINARY_DIR}/web/public/assets@/"
-
-
   )
 endif()
